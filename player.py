@@ -204,6 +204,51 @@ class Player:
         if item in self.inventory:
             self.inventory.remove(item)
     
+    def show_inventory(self):
+        """Exibe inventário formatado"""
+        if not self.inventory:
+            print("\n🎒 Inventário vazio!")
+            return
+        
+        print(f"\n{'='*40}")
+        print("🎒 INVENTÁRIO")
+        print(f"{'='*40}")
+        
+        for i, item in enumerate(self.inventory, 1):
+            icon = "⚔️" if item.item_type == "weapon" else "🛡️" if item.item_type == "shield" else "🧪"
+            print(f"{i}. {icon} {item.name}")
+            print(f"   {item.description}")
+            
+            if item.item_type == "weapon":
+                print(f"   Bônus: +{item.attack_bonus} Ataque")
+            elif item.item_type == "shield":
+                print(f"   Bônus: +{item.defense_bonus} Defesa")
+            elif item.item_type == "consumable":
+                print(f"   Efeito: Cura {item.heal_amount} HP")
+            print()
+        
+        print(f"{'='*40}")
+    
+    def use_item(self, item_index):
+        """Usa um item consumível do inventário"""
+        if item_index < 0 or item_index >= len(self.inventory):
+            print("\n❌ Item não encontrado no inventário!")
+            return False
+        
+        item = self.inventory[item_index]
+        
+        if item.item_type != "consumable":
+            print(f"\n❌ {item.name} não pode ser usado! (Equipamentos devem ser equipados)")
+            return False
+        
+        # Usa o item (chama o método use do item)
+        if item.use(self):
+            # Remove do inventário após uso
+            self.remove_from_inventory(item)
+            return True
+        
+        return False
+    
     def get_total_attack(self):
         """Retorna ataque total (base + equipamentos)"""
         total = self.base_attack
