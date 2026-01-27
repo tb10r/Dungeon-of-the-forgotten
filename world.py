@@ -1,3 +1,4 @@
+from enemy import Goblin, OrcChief
 class World:
     """Gerencia o mapa da dungeon como um grafo de salas"""
     
@@ -159,3 +160,105 @@ class World:
         print(f"Salas visitadas: {len(self.visited_rooms)}/6")
         print(f"Inimigos derrotados: {len(self.defeated_enemies)}")
         print(f"Tesouros coletados: {len(self.looted_rooms)}")
+
+    def create_enemy(self, room_id):
+        """Cria instância de inimigo baseado no tipo da sala"""
+        
+        enemy_type = self.get_enemy_type(room_id)
+        
+        if enemy_type == "goblin":
+            return Goblin()
+        elif enemy_type == "orc_chief":
+            return OrcChief()
+        
+        return None
+    
+    def get_item_from_room(self, room_id):
+        """Retorna instância do item da sala"""
+        from items import rusty_sword, simple_shield, health_potion
+        
+        item_name = self.get_treasure(room_id)
+        
+        if not item_name:
+            return None
+        
+        # Mapeia nome do item para instância
+        items_map = {
+            "rusty_sword": rusty_sword,
+            "simple_shield": simple_shield,
+            "health_potion": health_potion
+        }
+        
+        return items_map.get(item_name)
+    
+    def process_room_events(self, player):
+        """Processa eventos da sala atual (combate, tesouros, etc)"""
+        from combat import Combat
+        
+        room_id = player.position
+        room = self.get_room(room_id)
+        
+        if not room:
+            return {"event": "none"}
+        
+        # Marca sala como visitada
+        self.visited_rooms.add(room_id)  # ← ADICIONE ESTA LINHA
+        
+        # Verifica se é a saída
+        if self.is_exit(room_id):
+            return {"event": "exit"}
+        
+        # Verifica se há inimigo
+        if self.has_enemy(room_id):
+            enemy = self.create_enemy(room_id)
+            
+            if enemy:
+                print(f"\n⚠️  Um {enemy.name} aparece!")
+                
+                # Inicia combate
+                combat = Combat(player, enemy)
+                result = combat.run_combat()
+                
+                if result["result"] == "victory":
+                    # Marca inimigo como derrotado
+                    self.defeat_enemy(room_id)
+                    
+                    # Verifica se há loot
+                    if self.has_treasure(room_id):
+                        item = self.get_item_from_room(room_id)
+                        if item:
+                            player.add_to_inventory(item)
+                            print(f"\n💎 {item.name} encontrado(a)!")
+                    
+                    return {
+                        "event": "combat",
+                        "result": "victory",
+                        "enemy": enemy.name
+                    }
+                
+                elif result["result"] == "defeat":
+                    return {
+                        "event": "combat",
+                        "result": "defeat"
+                    }
+                
+                elif result["result"] == "fled":
+                    return {
+                        "event": "combat",
+                        "result": "fled"
+                    }
+        
+        # Verifica se há tesouro (sem inimigo)
+        elif self.has_treasure(room_id):
+            item = self.get_item_from_room(room_id)
+            if item:
+                player.add_to_inventory(item)
+                print(f"\n💎 Você encontrou: {item.name}!")
+                print(f"   {item.description}")
+                
+                return {
+                    "event": "treasure",
+                    "item": item.name
+                }
+        
+        return {"event": "none"}
