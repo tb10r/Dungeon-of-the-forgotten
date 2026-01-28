@@ -1,5 +1,8 @@
 import random
 
+# Multiplicador de dano crítico
+CRIT_MULTIPLIER = 2.0
+
 
 class Combat:
     """Gerencia combate por turnos entre player e enemy"""
@@ -10,22 +13,34 @@ class Combat:
         self.turn_count = 0
         self.combat_active = True
     
-    def calculate_damage(self, attacker_attack, defender_defense):
+    def calculate_damage(self, attacker_attack, defender_defense, is_critical=False):
         """Calcula dano causado (mínimo 1)"""
         damage = attacker_attack - defender_defense
+        if is_critical:
+            damage = int(damage * CRIT_MULTIPLIER)
         return max(1, damage)
     
     def player_attack(self):
         """Turno de ataque do jogador"""
+        # Verifica se é crítico
+        is_critical = self.player.roll_critical_hit()
+        
         damage = self.calculate_damage(
             self.player.get_total_attack(),
-            self.enemy.defense
+            self.enemy.defense,
+            is_critical
         )
         
         self.enemy.take_damage(damage)
         
         print(f"\n⚔️  Você ataca {self.enemy.name}!")
-        print(f"💥 Dano causado: {damage}")
+        
+        if is_critical:
+            print("🌟 ✨ ACERTO CRÍTICO! ✨ 🌟")
+            print(f"💥 Dano causado: {damage} (x{CRIT_MULTIPLIER})")
+        else:
+            print(f"💥 Dano causado: {damage}")
+        
         print(f"🩸 {self.enemy.name} HP: {self.enemy.hp}/{self.enemy.max_hp}")
         
         return damage
@@ -178,6 +193,10 @@ class Combat:
             if self.combat_active and self.enemy.is_alive():
                 input("\n[Pressione Enter para o turno do inimigo]")
                 self.enemy_attack()
+                
+                # Pausa após ataque do inimigo
+                if not self.is_combat_over():
+                    input("\n[Pressione Enter para seu turno]")
         
         # Resultado final
         return self.end_combat()

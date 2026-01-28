@@ -22,6 +22,14 @@ class Shield(Item):
         self.defense_bonus = defense_bonus
 
 
+class Armor(Item):
+    """Armaduras que aumentam defesa"""
+    
+    def __init__(self, name, defense_bonus, description):
+        super().__init__(name, "armor", description)
+        self.defense_bonus = defense_bonus
+
+
 class Potion(Item):
     """Poções consumíveis que curam HP"""
     
@@ -44,6 +52,21 @@ class Potion(Item):
         return True
 
 
+class Key(Item):
+    """Chave especial necessária para sair da dungeon"""
+    
+    def __init__(self, name, description):
+        super().__init__(name, "key", description)
+
+
+class Rune(Item):
+    """Runa mágica que pode invocar entidades no altar"""
+    
+    def __init__(self, name, description, summon_entity):
+        super().__init__(name, "rune", description)
+        self.summon_entity = summon_entity  # Nome do inimigo que invoca
+
+
 # Instâncias dos itens do jogo
 rusty_sword = Weapon(
     name="Espada Enferrujada",
@@ -61,4 +84,51 @@ health_potion = Potion(
     name="Poção de Cura",
     heal_amount=30,
     description="Uma poção vermelha brilhante que restaura 30 HP."
+)
+
+exit_key = Key(
+    name="Chave da Saída",
+    description="Uma chave antiga e ornamentada. Parece ser importante para escapar daqui."
+)
+
+summoning_rune = Rune(
+    name="Runa de Invocação",
+    description="Uma runa negra pulsante com símbolos místicos. Emite uma energia sombria.",
+    summon_entity="blackwarrior"
+)
+
+butcher_spatula = Weapon(
+    name="espátula do Butcher",
+    attack_bonus=4,
+    description="Uma espátula grande e afiada, usada pelo Mestre Butcher em suas batalhas e criações culinárias."
+)
+
+iron_shield = Shield(
+    name= "Escudo de Ferro",
+    defense_bonus=4,
+    description="Um escudo robusto feito de ferro forjado, oferecendo excelente proteção."
+)
+
+leather_armor = Armor(
+    name="Armadura de Couro",
+    defense_bonus=3,
+    description="Uma armadura leve feita de couro curtido."
+)
+
+iron_armor = Armor(
+    name="Armadura de Ferro",
+    defense_bonus=5,
+    description="Uma armadura pesada que oferece excelente proteção."
+)
+
+Blackwarrior_sword = Weapon(
+    name="Blackwarrior's Blade",
+    attack_bonus=10,
+    description="A lâmina sombria empunhada pelo Blackwarrior, imbuída com energia mística."
+)
+
+Blackwarrior_armor = Armor(
+    name="Blackwarrior's Armor",
+    defense_bonus=10,
+    description="A armadura negra usada pelo Blackwarrior, oferecendo proteção superior."
 )

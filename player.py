@@ -7,7 +7,7 @@ class Player:
         self.xp = 0
         
         # Atributos primários
-        self.strength = 5      # Afeta ataque (1 força = +2 ataque)
+        self.strength = 5      # Afeta ataque (1 força = +2 ataque)(original é 5)
         self.vitality = 5      # Afeta HP (1 vitalidade = +10 HP)
         self.agility = 5       # Afeta defesa (1 agilidade = +1 defesa)
         
@@ -21,6 +21,7 @@ class Player:
         self.position = "1"
         self.equipped_weapon = None
         self.equipped_shield = None
+        self.equipped_armor = None
     
     def calculate_max_hp(self):
         """Calcula HP máximo baseado em vitalidade"""
@@ -33,6 +34,19 @@ class Player:
     def calculate_defense(self):
         """Calcula defesa base baseada em agilidade"""
         return 1 + (self.agility * 1)
+    
+    def calculate_crit_chance(self):
+        """Calcula chance de acerto crítico baseada em agilidade"""
+        base_crit = 5  # 5% base
+        agi_bonus = self.agility * 1  # +1% por ponto de agilidade
+        return min(base_crit + agi_bonus, 50)  # Cap em 50%
+    
+    def roll_critical_hit(self):
+        """Verifica se o ataque é crítico"""
+        import random
+        crit_chance = self.calculate_crit_chance()
+        roll = random.random() * 100  # Número entre 0 e 100
+        return roll < crit_chance
     
     def get_xp_needed(self):
         """Calcula XP necessário para próximo nível"""
@@ -57,6 +71,8 @@ class Player:
         print(f"{'='*50}")
         print("Você ganhou 3 pontos de atributo para distribuir!")
         
+        #salva o hp maximo atual antes de distribuir os pontos
+        old_max_hp = self.max_hp
         # Distribuir pontos
         self.distribute_attribute_points(3)
         
@@ -90,7 +106,7 @@ class Player:
             print(f"{'='*40}")
             print("1 - Força → Aumenta Ataque em +2 por ponto")
             print("2 - Vitalidade → Aumenta HP em +10 por ponto")
-            print("3 - Agilidade → Aumenta Defesa em +1 por ponto")
+            print("3 - Agilidade → Aumenta Defesa em +1 e Taxa Crítico em +1% por ponto")
             print("4 - Ver stats atuais")
             print("5 - Distribuir automaticamente")
             
@@ -107,7 +123,7 @@ class Player:
                     print(f"\n📊 Preview das stats:")
                     print(f"  Força: {self.strength} → Ataque: {self.calculate_attack()}")
                     print(f"  Vitalidade: {self.vitality} → HP: {self.calculate_max_hp()}")
-                    print(f"  Agilidade: {self.agility} → Defesa: {self.calculate_defense()}")
+                    print(f"  Agilidade: {self.agility} → Defesa: {self.calculate_defense()} | Crítico: {self.calculate_crit_chance()}%")
                     continue
                 
                 if choice not in [1, 2, 3]:
@@ -147,8 +163,10 @@ class Player:
                             self.agility += amount
                             remaining -= amount
                             new_defense = self.calculate_defense()
+                            new_crit = self.calculate_crit_chance()
                             print(f"✅ Agilidade aumentada em +{amount} (Total: {self.agility})!")
-                            print(f"   Defesa será: {new_defense} (+{amount * 1})")
+                            print(f"   Defesa será: {new_defense} (+{amount})")
+                            print(f"   Taxa de Crítico será: {new_crit}% (+{amount}%)")
                         
                         break  # Sai do loop de quantidade
                     
@@ -261,6 +279,8 @@ class Player:
         total = self.base_defense
         if self.equipped_shield:
             total += self.equipped_shield.defense_bonus
+        if self.equipped_armor:
+            total += self.equipped_armor.defense_bonus
         return total
     
     def equip_weapon(self, weapon):
@@ -279,6 +299,15 @@ class Player:
         
         self.equipped_shield = shield
         print(f"\n✅ {shield.name} equipado!")
+        print(f"Defesa agora: {self.get_total_defense()}")
+    
+    def equip_armor(self, armor):
+        """Equipa uma armadura"""
+        if self.equipped_armor:
+            print(f"\n{self.equipped_armor.name} foi desequipada.")
+        
+        self.equipped_armor = armor
+        print(f"\n✅ {armor.name} equipada!")
         print(f"Defesa agora: {self.get_total_defense()}")
     
     def unequip_weapon(self):
@@ -307,17 +336,20 @@ class Player:
         print(f"❤️  HP: {self.hp} / {self.max_hp}")
         print(f"⚔️  Ataque: {self.get_total_attack()} (Base: {self.base_attack})")
         print(f"🛡️  Defesa: {self.get_total_defense()} (Base: {self.base_defense})")
+        print(f"🌟 Taxa de Crítico: {self.calculate_crit_chance()}%")
         print(f"✨ XP: {self.xp} / {self.get_xp_needed()}")
         print(f"\n📊 Atributos:")
         print(f"  💪 Força: {self.strength}")
         print(f"  ❤️  Vitalidade: {self.vitality}")
         print(f"  ⚡ Agilidade: {self.agility}")
         
-        if self.equipped_weapon or self.equipped_shield:
+        if self.equipped_weapon or self.equipped_shield or self.equipped_armor:
             print(f"\n🎒 Equipamentos:")
             if self.equipped_weapon:
-                print(f"  ⚔️  {self.equipped_weapon.name} (+{self.equipped_weapon.attack_bonus})")
+                print(f"  ⚔️  {self.equipped_weapon.name} (+{self.equipped_weapon.attack_bonus} Ataque)")
             if self.equipped_shield:
-                print(f"  🛡️  {self.equipped_shield.name} (+{self.equipped_shield.defense_bonus})")
+                print(f"  🛡️  {self.equipped_shield.name} (+{self.equipped_shield.defense_bonus} Defesa)")
+            if self.equipped_armor:
+                print(f"  🛡️  {self.equipped_armor.name} (+{self.equipped_armor.defense_bonus} Defesa)")
         
         print(f"{'='*40}")
