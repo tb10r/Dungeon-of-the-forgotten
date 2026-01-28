@@ -74,6 +74,16 @@ class MestreButcher(Enemy):
             description="Um chefe de cozinha incrível que agora é só um esqueleto, porém ele ataca quem entra na cozinha dele."
         )
         self.can_flee = True
+        self.turn_counter = 0
+    
+    def get_attack_damage(self):
+        self.turn_counter += 1
+        
+        if self.turn_counter % 4 == 0:
+            print(f"\n🔪 {self.name} arremessa facas de açougueiro!")
+            return int(self.attack * 1.5)
+        
+        return self.attack
 
 
 class Spaghettus(Enemy):
@@ -104,3 +114,13 @@ class Blackwarrior(Enemy):
             description="Um guerreiro sombrio que protege os segredos do altar."
         )
         self.can_flee = False
+        self.turn_counter = 0
+    
+    def get_attack_damage(self):
+        self.turn_counter += 1
+        
+        if self.turn_counter % 3 == 0:
+            print(f"\n⚫ 💥 {self.name} libera sua FÚria Sombria!")
+            return int(self.attack * 2.5)
+        
+        return self.attack
