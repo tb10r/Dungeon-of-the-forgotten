@@ -124,8 +124,9 @@ class Combat:
         """Exibe opções de combate"""
         print("\n🎮 Ações de Combate:")
         print("1 - Atacar")
-        print("2 - Usar Item")
-        print("3 - Fugir")
+        print("2 - Lançar Magia")
+        print("3 - Usar Item")
+        print("4 - Fugir")
     
     def player_turn(self):
         """Turno completo do jogador (escolha de ação)"""
@@ -143,6 +144,39 @@ class Combat:
                     break
                 
                 elif choice == "2":
+                    # Lança magia
+                    if not self.player.known_spells:
+                        print("\n❌ Você não conhece nenhuma magia!")
+                        continue
+                    
+                    self.player.show_spells()
+                    
+                    try:
+                        spell_idx = int(input("\nQual magia usar? (0 para cancelar): ")) - 1
+                        if spell_idx == -1:
+                            continue
+                        
+                        if spell_idx < 0 or spell_idx >= len(self.player.known_spells):
+                            print("\n❌ Magia inválida!")
+                            continue
+                        
+                        spell = self.player.known_spells[spell_idx]
+                        
+                        # Verifica se tem mana suficiente
+                        if self.player.mana < spell.mana_cost:
+                            print(f"\n❌ Mana insuficiente! Precisa de {spell.mana_cost}, tem {self.player.mana}")
+                            continue
+                        
+                        # Lança a magia
+                        result = spell.cast(self.player, self.enemy)
+                        print(result)
+                        break
+                        
+                    except (ValueError, IndexError):
+                        print("\n❌ Magia inválida!")
+                        continue
+                
+                elif choice == "3":
                     # Usa item
                     if not self.player.inventory:
                         print("\n❌ Inventário vazio!")
@@ -161,7 +195,7 @@ class Combat:
                         print("\n❌ Item inválido!")
                         continue
                 
-                elif choice == "3":
+                elif choice == "4":
                     # Tenta fugir
                     self.attempt_flee()
                     break
@@ -193,6 +227,15 @@ class Combat:
             if self.combat_active and self.enemy.is_alive():
                 input("\n[Pressione Enter para o turno do inimigo]")
                 self.enemy_attack()
+                
+                # Regeneração de mana após o turno do inimigo
+                if self.player.is_alive():
+                    mana_regen = 5
+                    old_mana = self.player.mana
+                    self.player.restore_mana(mana_regen)
+                    actual_regen = self.player.mana - old_mana
+                    if actual_regen > 0:
+                        print(f"\n✨ +{actual_regen} mana regenerada ({self.player.mana}/{self.player.max_mana})")
                 
                 # Pausa após ataque do inimigo
                 if not self.is_combat_over():

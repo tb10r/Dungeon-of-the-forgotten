@@ -124,3 +124,48 @@ class Blackwarrior(Enemy):
             return int(self.attack * 2.5)
         
         return self.attack
+
+class Necromancer(Enemy):
+    """Necromante que usa magias sombrias"""
+    
+    def __init__(self):
+        super().__init__(
+            name="Necromante",
+            hp=120,
+            attack=16,
+            defense=6,
+            xp_reward=300,
+            description="Um necromante poderoso envolto em vestes sombrias. Ossos flutuam ao seu redor."
+        )
+        self.can_flee = False
+        self.turn_counter = 0
+    
+    def get_attack_damage(self):
+        self.turn_counter += 1
+        
+        if self.turn_counter % 3 == 0:
+            print(f"\n💀 {self.name} lança DRENAGEM DE ALMA!")
+            print(f"⚫ Você sente sua força vital sendo sugada!")
+            # Dano 2x e cura o necromante em 20% do dano causado
+            damage = int(self.attack * 2)
+            heal_amount = int(damage * 0.2)
+            self.hp = min(self.hp + heal_amount, self.max_hp)
+            if heal_amount > 0:
+                print(f"💚 {self.name} recuperou {heal_amount} HP!")
+            return damage
+        
+        return self.attack
+
+class esqueleto(Enemy):
+    """Esqueleto reanimado pelo Necromante"""
+    
+    def __init__(self):
+        super().__init__(
+            name="Esqueleto",
+            hp=60,
+            attack=12,
+            defense=4,
+            xp_reward=100,
+            description="Um esqueleto reanimado que serve ao necromante."
+        )
+        self.can_flee = True

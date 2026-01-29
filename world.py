@@ -1,5 +1,5 @@
 import random
-from enemy import Goblin, OrcChief, MestreButcher, Blackwarrior, Spaghettus
+from enemy import Goblin, OrcChief, MestreButcher, Blackwarrior, Spaghettus, esqueleto
 
 class World:
     """Gerencia o mapa da dungeon como um grafo de salas"""
@@ -131,7 +131,127 @@ class World:
                 "name": "Câmara das Ruínas",
                 "type": "treasure",
                 "description": "Colunas quebradas e destroços de uma civilização antiga.\nUm baú de bronze está meio enterrado nos escombros.",
-                "connections": {"oeste": "13"},
+                "connections": {"oeste": "13", "sul": "16"},
+                "enemy": None,
+                "items": []
+            },
+            "16": {
+                "name": "Passagem Estreita",
+                "type": "corridor",
+                "description": "Uma passagem tão estreita que você precisa andar de lado.\nO ar está abafado e quente.",
+                "connections": {"norte": "15", "sul": "17", "oeste": "18"},
+                "enemy": None,
+                "items": []
+            },
+            "17": {
+                "name": "Caverna de Estalactites",
+                "type": "enemy",
+                "description": "Estalactites afiadas pendem do teto como lanças.\nGotas de água ecoam pela caverna.",
+                "connections": {"norte": "16"},
+                "enemy": "goblin",
+                "items": []
+            },
+            "18": {
+                "name": "Depósito Inundado",
+                "type": "treasure",
+                "description": "Água até os tornozelos cobre o chão desta sala.\nCaixas empilhadas e um baú flutuam na água.",
+                "connections": {"leste": "16", "sul": "19"},
+                "enemy": None,
+                "items": []
+            },
+            "19": {
+                "name": "Catacumbas Antigas",
+                "type": "enemy",
+                "description": "Nichos nas paredes contêm ossos antigos.\nUm esqueleto reanimado patrulha entre as tumbas.",
+                "connections": {"norte": "18", "leste": "20", "sul": "22"},
+                "enemy": "esqueleto",
+                "items": []
+            },
+            "20": {
+                "name": "Cripta Profanada",
+                "type": "boss",
+                "description": "Sarcófagos quebrados e saqueados cercam um círculo necromântico.\nO ar é pesado com energia sombria.",
+                "connections": {"oeste": "19", "sul": "21"},
+                "enemy": "necromancer",
+                "items": ["necromancer_robe", "necromancer_curser"]
+            },
+            "21": {
+                "name": "Câmara do Escriba",
+                "type": "treasure",
+                "description": "Uma escrivaninha antiga com pergaminhos deteriorados.\nUm pequeno baú está trancado sob a mesa.",
+                "connections": {"norte": "20"},
+                "enemy": None,
+                "items": []
+            },
+            "22": {
+                "name": "Túnel Desabado",
+                "type": "enemy",
+                "description": "Rochas e entulho bloqueiam parte da passagem.\nUm esqueleto emerge dos escombros.",
+                "connections": {"norte": "19", "leste": "23"},
+                "enemy": "esqueleto",
+                "items": []
+            },
+            "23": {
+                "name": "Sala das Armadilhas",
+                "type": "enemy",
+                "description": "Marcas de flechas nas paredes e buracos no chão.\nUm goblin patrulha os mecanismos enferrujados.",
+                "connections": {"oeste": "22", "sul": "24"},
+                "enemy": "goblin",
+                "items": []
+            },
+            "24": {
+                "name": "Torre em Ruínas",
+                "type": "enemy",
+                "description": "O que restou de uma torre interna.\nUm esqueleto guardando as escadas quebradas.",
+                "connections": {"norte": "23", "leste": "25", "sul": "26"},
+                "enemy": "esqueleto",
+                "items": []
+            },
+            "25": {
+                "name": "Observatório Destruído",
+                "type": "treasure",
+                "description": "Instrumentos astronômicos antigos cobertos de ferrugem.\nUm baú celestial jaz no centro.",
+                "connections": {"oeste": "24"},
+                "enemy": None,
+                "items": []
+            },
+            "26": {
+                "name": "Ponte de Pedra",
+                "type": "enemy",
+                "description": "Uma ponte sobre um abismo escuro.\nUm esqueleto bloqueia a passagem.",
+                "connections": {"norte": "24", "sul": "27"},
+                "enemy": "esqueleto",
+                "items": []
+            },
+            "27": {
+                "name": "Forja Apagada",
+                "type": "enemy",
+                "description": "Uma forja antiga ainda emite calor das brasas.\nFerramentas de ferreiro estão espalhadas.",
+                "connections": {"norte": "26", "leste": "28"},
+                "enemy": "goblin",
+                "items": []
+            },
+            "28": {
+                "name": "Arsenal Secreto",
+                "type": "treasure",
+                "description": "Uma sala escondida cheia de armas antigas.\nUm baú reforçado está encostado na parede.",
+                "connections": {"oeste": "27", "sul": "29"},
+                "enemy": None,
+                "items": []
+            },
+            "29": {
+                "name": "Salão dos Espelhos",
+                "type": "enemy",
+                "description": "Espelhos rachados refletem sua imagem distorcida.\nUm esqueleto se move entre os reflexos.",
+                "connections": {"norte": "28", "oeste": "30"},
+                "enemy": "esqueleto",
+                "items": []
+            },
+            "30": {
+                "name": "Prisão Abandonada",
+                "type": "treasure",
+                "description": "Celas enferrujadas com correntes penduradas.\nUm baú do carcereiro está em um canto.",
+                "connections": {"leste": "29"},
                 "enemy": None,
                 "items": []
             }
@@ -146,8 +266,16 @@ class World:
             "iron_shield",
             "leather_armor",
             "iron_armor",
+            "fireball",
+            "lightning_bolt",
+            "ice_shard",
+            "magical_heal",
             # Adicione mais itens aqui conforme criar
         ]
+        
+        # Meteoro tem 33% de chance de aparecer
+        if random.random() < 0.33:
+            available_items.append("meteor")
         
         # Embaralha a lista para ordem aleatória
         random.shuffle(available_items)
@@ -156,11 +284,17 @@ class World:
         treasure_rooms = [room_id for room_id, room in self.rooms.items() 
                          if room.get("type") == "treasure"]
         
-        # Escolhe baús aleatórios para chave e runa
-        if treasure_rooms:
+        # Escolhe baús aleatórios para chave, runa do blackwarrior e runa do necromante
+        if len(treasure_rooms) >= 3:
             key_room = random.choice(treasure_rooms)
-            # Escolhe um baú diferente para a runa
-            rune_room = random.choice([r for r in treasure_rooms if r != key_room])
+            # Escolhe um baú diferente para a runa do blackwarrior
+            remaining_rooms = [r for r in treasure_rooms if r != key_room]
+            rune_room = random.choice(remaining_rooms)
+            # Escolhe um baú diferente para a runa do necromante
+            remaining_rooms = [r for r in remaining_rooms if r != rune_room]
+            necro_rune_room = random.choice(remaining_rooms)
+        else:
+            key_room = rune_room = necro_rune_room = None
         
         # Distribui itens únicos para cada baú
         item_index = 0
@@ -175,9 +309,13 @@ class World:
             if room_id == key_room:
                 room_items.append("exit_key")
             
-            # Adiciona a runa no baú escolhido
+            # Adiciona a runa do blackwarrior no baú escolhido
             if room_id == rune_room:
                 room_items.append("summoning_rune")
+            
+            # Adiciona a runa do necromante no baú escolhido
+            if room_id == necro_rune_room:
+                room_items.append("necromancer_rune")
             
             # Atribui itens ao baú
             self.rooms[room_id]["items"] = room_items
@@ -309,12 +447,14 @@ class World:
             return Spaghettus()
         elif enemy_type == "blackwarrior":
             return Blackwarrior()
+        elif enemy_type == "esqueleto":
+            return esqueleto()
         
         return None
     
     def get_item_from_room(self, room_id):
         """Retorna instância do item da sala"""
-        from items import rusty_sword, simple_shield, health_potion, exit_key, summoning_rune, iron_shield, leather_armor, iron_armor, Blackwarrior_sword, Blackwarrior_armor, butcher_spatula
+        from items import rusty_sword, simple_shield, health_potion, exit_key, summoning_rune, necromancer_rune, iron_shield, leather_armor, iron_armor, necromancer_robe, Blackwarrior_sword, Blackwarrior_armor, butcher_spatula, fireball, lightning_bolt, ice_shard, magical_heal, meteor, necromancer_curser
         
         item_names = self.get_treasure(room_id)
         
@@ -328,12 +468,20 @@ class World:
             "health_potion": health_potion,
             "exit_key": exit_key,
             "summoning_rune": summoning_rune,
+            "necromancer_rune": necromancer_rune,
             "iron_shield": iron_shield,
             "leather_armor": leather_armor,
             "iron_armor": iron_armor,
+            "necromancer_robe": necromancer_robe,
             "Blackwarrior_sword": Blackwarrior_sword,
             "Blackwarrior_armor": Blackwarrior_armor,
-            "butcher_spatula": butcher_spatula
+            "butcher_spatula": butcher_spatula,
+            "fireball": fireball,
+            "lightning_bolt": lightning_bolt,
+            "ice_shard": ice_shard,
+            "magical_heal": magical_heal,
+            "meteor": meteor,
+            "necromancer_curser": necromancer_curser
         }
         
         items = []
@@ -356,6 +504,79 @@ class World:
         
         # Marca sala como visitada
         self.visited_rooms.add(room_id)
+        
+        # Verifica se é a Cripta Profanada (sala 20) e se o jogador tem a runa necromântica
+        if room_id == "20" and room_id not in self.defeated_enemies:
+            # Verifica se tem a runa necromântica
+            necro_rune = next((item for item in player.inventory 
+                              if item.item_type == "rune" and item.summon_entity == "necromancer"), None)
+            
+            if necro_rune:
+                print(f"\n🔮 O círculo necromântico no chão reage à {necro_rune.name}!")
+                print("💀 Energia profana começa a surgir dos sarcófagos...")
+                
+                choice = input("\n⚰️  Usar a runa para invocar o necromante? (s/n): ").strip().lower()
+                
+                if choice == 's':
+                    # Remove a runa do inventário
+                    player.remove_from_inventory(necro_rune)
+                    print(f"\n🌀 Você coloca a {necro_rune.name} no centro do círculo!")
+                    print("💀 Ossos começam a se erguer e se fundir!")
+                    print("👻 O NECROMANTE FOI INVOCADO!")
+                    
+                    # Cria o necromante e inicia combate
+                    from enemy import Necromancer
+                    enemy = Necromancer()
+                    print(f"\n{enemy.description}")
+                    
+                    from combat import Combat
+                    combat = Combat(player, enemy)
+                    result = combat.run_combat()
+                    
+                    if result["result"] == "victory":
+                        self.defeat_enemy(room_id)
+                        
+                        # Adiciona loot do necromante (manto + magia poderosa)
+                        items = self.get_item_from_room(room_id)
+                        if items:
+                            print(f"\n💎 Você encontrou {len(items)} item(ns) do necromante derrotado!")
+                            
+                            for item in items:
+                                # Se for magia, aprende diretamente
+                                if item.item_type == "spell":
+                                    player.learn_spell(item)
+                                    print(f"  ✨ {item.name} - Magia aprendida!")
+                                else:
+                                    player.add_to_inventory(item)
+                                    print(f"  ✓ {item.name}")
+                                
+                                # Pergunta se quer equipar armadura
+                                if item.item_type == "armor":
+                                    equip = input(f"\n🛡️  Equipar {item.name}? (s/n): ").strip().lower()
+                                    if equip == 's':
+                                        player.equip_armor(item)
+                        
+                        return {
+                            "event": "combat",
+                            "result": "victory",
+                            "enemy": enemy.name
+                        }
+                    elif result["result"] == "defeat":
+                        return {
+                            "event": "combat",
+                            "result": "defeat"
+                        }
+                    elif result["result"] == "fled":
+                        return {
+                            "event": "combat",
+                            "result": "fled"
+                        }
+                else:
+                    print("\n🚶 Você decide não invocar o necromante agora...")
+                    return {"event": "none"}
+            else:
+                print("\n💀 O círculo necromântico está inerte. Talvez você precise de algo especial para ativá-lo...")
+                return {"event": "none"}
         
         # Verifica se é o Altar Sombrio (sala 14) e se o jogador tem a runa
         if room_id == "14" and room_id not in self.defeated_enemies:
@@ -457,8 +678,13 @@ class World:
                         print(f"\n💎 Você encontrou {len(items)} item(ns)!")
                         
                         for item in items:  # ← MUDOU: loop sobre todos os itens
-                            player.add_to_inventory(item)
-                            print(f"  ✓ {item.name}")
+                            # Se for magia, aprende diretamente
+                            if item.item_type == "spell":
+                                player.learn_spell(item)
+                                print(f"  ✨ {item.name} - Magia aprendida!")
+                            else:
+                                player.add_to_inventory(item)
+                                print(f"  ✓ {item.name}")
                             
                             # Pergunta se quer equipar (se for arma ou escudo)
                             if item.item_type == "weapon":
@@ -518,8 +744,14 @@ class World:
                 print(f"\n💎 Você encontrou {len(items)} item(ns)!")
                 
                 for item in items:  # ← MUDOU: loop sobre todos os itens
-                    player.add_to_inventory(item)
-                    print(f"  ✓ {item.name} - {item.description}")
+                    # Se for magia, aprende diretamente
+                    if item.item_type == "spell":
+                        player.learn_spell(item)
+                        print(f"  ✨ {item.name} - Magia aprendida!")
+                        print(f"     {item.description}")
+                    else:
+                        player.add_to_inventory(item)
+                        print(f"  ✓ {item.name} - {item.description}")
                     
                     # Pergunta se quer equipar (se for arma ou escudo)
                     if item.item_type == "weapon":

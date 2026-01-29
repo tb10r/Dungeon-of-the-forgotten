@@ -116,10 +116,37 @@ def start_new_game():
     if not name:
         name = "Aventureiro"
     
-    player = Player(name)
+    # Seleção de classe
+    print(f"\n{'='*50}")
+    print("🎭 ESCOLHA SUA CLASSE")
+    print(f"{'='*50}")
+    print("\n1 - ⚔️  Guerreiro")
+    print("   • +30% de dano corpo a corpo")
+    print("   • Mais HP e Força")
+    print("   • -20% de dano mágico")
+    print("\n2 - 🔮 Mago")
+    print("   • +50% de dano mágico")
+    print("   • +30 Mana máxima (80 total)")
+    print("   • -30% de dano corpo a corpo")
+    
+    while True:
+        class_choice = input("\nEscolha sua classe (1 ou 2): ").strip()
+        
+        if class_choice == "1":
+            player_class = "guerreiro"
+            print("\n⚔️  Você escolheu ser um Guerreiro!")
+            break
+        elif class_choice == "2":
+            player_class = "mago"
+            print("\n🔮 Você escolheu ser um Mago!")
+            break
+        else:
+            print("❌ Opção inválida! Digite 1 ou 2.")
+    
+    player = Player(name, player_class)
     world = World()
     
-    print(f"\n✨ Bem-vindo, {player.name}!")
+    print(f"\n✨ Bem-vindo, {player.name} o {player_class.capitalize()}!")
     print("Você entra em uma dungeon antiga, esquecida pelo tempo...")
     
     input("\n[Pressione Enter para começar]")

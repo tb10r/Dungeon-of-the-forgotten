@@ -23,11 +23,12 @@ class Shield(Item):
 
 
 class Armor(Item):
-    """Armaduras que aumentam defesa"""
+    """Armaduras que aumentam defesa e opcionalmente mana"""
     
-    def __init__(self, name, defense_bonus, description):
+    def __init__(self, name, defense_bonus, description, mana_bonus=0):
         super().__init__(name, "armor", description)
         self.defense_bonus = defense_bonus
+        self.mana_bonus = mana_bonus  # Bônus de mana máxima
 
 
 class Potion(Item):
@@ -67,6 +68,51 @@ class Rune(Item):
         self.summon_entity = summon_entity  # Nome do inimigo que invoca
 
 
+class Spell(Item):
+    """Magias que podem ser aprendidas e usadas em combate"""
+    
+    def __init__(self, name, description, mana_cost, power, spell_type):
+        super().__init__(name, "spell", description)
+        self.mana_cost = mana_cost  # Custo em mana para lançar
+        self.power = power  # Dano ou cura
+        self.spell_type = spell_type  # "damage" ou "heal"
+    
+    def cast(self, caster, target=None):
+        """Lança a magia"""
+        if not caster.use_mana(self.mana_cost):
+            print(f"\n❌ Mana insuficiente! Necessário: {self.mana_cost}, Disponível: {caster.mana}")
+            return False
+        
+        print(f"\n✨ {caster.name} lançou {self.name}!")
+        
+        if self.spell_type == "damage":
+            if target:
+                # Aplica bônus de poder mágico da classe
+                magic_power_bonus = getattr(caster, 'magic_power', 1.0)
+                base_damage = int(self.power * magic_power_bonus)
+                
+                # Calcula dano considerando defesa mágica (50% da defesa normal)
+                magic_defense = target.defense // 2
+                damage = max(1, base_damage - magic_defense)
+                target.take_damage(damage)
+                print(f"💥 {target.name} recebeu {damage} de dano mágico!")
+                print(f"🩸 {target.name} HP: {target.hp}/{target.max_hp}")
+                return True
+        
+        elif self.spell_type == "heal":
+            # Aplica bônus de poder mágico da classe também na cura
+            magic_power_bonus = getattr(caster, 'magic_power', 1.0)
+            heal_amount = int(self.power * magic_power_bonus)
+            
+            old_hp = caster.hp
+            caster.heal(heal_amount)
+            healed = caster.hp - old_hp
+            print(f"💚 Você curou {healed} HP! (HP: {caster.hp}/{caster.max_hp})")
+            return True
+        
+        return False
+
+
 # Instâncias dos itens do jogo
 rusty_sword = Weapon(
     name="Espada Enferrujada",
@@ -93,8 +139,14 @@ exit_key = Key(
 
 summoning_rune = Rune(
     name="Runa de Invocação",
-    description="Uma runa negra pulsante com símbolos místicos. Emite uma energia sombria.",
+    description="Uma runa negra pulsante com símbolos místicos. Emite uma energia sombria parece chamar para o altar sombrio.",
     summon_entity="blackwarrior"
+)
+
+necromancer_rune = Rune(
+    name="Runa Necromântica",
+    description="Uma runa sombria pulsando com energia profana. Use na Cripta para invocar algo terrível.",
+    summon_entity="necromancer"
 )
 
 butcher_spatula = Weapon(
@@ -121,6 +173,13 @@ iron_armor = Armor(
     description="Uma armadura pesada que oferece excelente proteção."
 )
 
+necromancer_robe = Armor(
+    name="Manto do Necromante",
+    defense_bonus=6,
+    description="Manto negro impregnado com energia arcana sombria. Aumenta defesa e poder mágico.",
+    mana_bonus=30
+)
+
 Blackwarrior_sword = Weapon(
     name="Blackwarrior's Blade",
     attack_bonus=10,
@@ -131,4 +190,53 @@ Blackwarrior_armor = Armor(
     name="Blackwarrior's Armor",
     defense_bonus=10,
     description="A armadura negra usada pelo Blackwarrior, oferecendo proteção superior."
+)
+
+# Magias
+fireball = Spell(
+    name="Bola de Fogo",
+    description="Uma esfera flamejante que causa dano devastador ao inimigo.",
+    mana_cost=15,
+    power=25,
+    spell_type="damage"
+)
+
+lightning_bolt = Spell(
+    name="Raio Elétrico",
+    description="Um raio fulminante que atinge o inimigo com precisão.",
+    mana_cost=10,
+    power=18,
+    spell_type="damage"
+)
+
+ice_shard = Spell(
+    name="Fragmento de Gelo",
+    description="Cristais de gelo afiados que perfuram o inimigo.",
+    mana_cost=12,
+    power=20,
+    spell_type="damage"
+)
+
+magical_heal = Spell(
+    name="Cura Mágica",
+    description="Uma luz curativa que restaura seus pontos de vida.",
+    mana_cost=20,
+    power=40,
+    spell_type="heal"
+)
+
+meteor = Spell(
+    name="Meteoro",
+    description="Invoca um meteoro devastador do céu. A magia mais poderosa conhecida.",
+    mana_cost=30,
+    power=50,
+    spell_type="damage"
+)
+
+necromancer_curser = Spell(
+    name="Maldição do Necromante",
+    description="Uma maldição sombria que drena a vida do inimigo.",
+    mana_cost=25,
+    power=70,
+    spell_type="damage"
 )
