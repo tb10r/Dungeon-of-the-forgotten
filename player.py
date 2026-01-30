@@ -15,7 +15,7 @@ class Player:
             self.magic_power = 1.5     # 50% mais dano mágico
             self.melee_bonus = 0.7     # 30% menos dano corpo a corpo
         else:  # guerreiro
-            self.strength = 1111          # Mais força
+            self.strength = 4          # Mais força
             self.vitality = 6          # Mais vitalidade
             self.agility = 4           # Menos agilidade
             self.magic_power = 0.8     # 20% menos dano mágico
@@ -46,6 +46,33 @@ class Player:
         self.equipped_weapon = None
         self.equipped_shield = None
         self.equipped_armor = None
+        
+        # Equipar itens iniciais baseado na classe (antes de calcular stats)
+        self._equip_starting_gear()
+        
+        # Recalcula stats com equipamentos equipados
+        self.max_mana = self.calculate_max_mana()
+        self.mana = self.max_mana
+    
+    def _equip_starting_gear(self):
+        """Equipa arma e armadura inicial baseado na classe escolhida"""
+        import copy
+        from items import health_potion, simple_shield
+        
+        if self.player_class == "mago":
+            from items import mage_staff, mage_robe
+            self.equipped_weapon = mage_staff
+            self.equipped_armor = mage_robe
+            # Mago começa com 2 poções no inventário (cópias independentes)
+            self.inventory.append(copy.deepcopy(health_potion))
+            self.inventory.append(copy.deepcopy(health_potion))
+        else:  # guerreiro
+            from items import warrior_sword, warrior_armor
+            self.equipped_weapon = warrior_sword
+            self.equipped_armor = warrior_armor
+            # Guerreiro começa com 1 poção e 1 escudo simples no inventário
+            self.inventory.append(copy.deepcopy(health_potion))
+            self.inventory.append(copy.deepcopy(simple_shield))
     
     def calculate_max_hp(self):
         """Calcula HP máximo baseado em vitalidade"""
@@ -67,7 +94,8 @@ class Player:
     
     def calculate_max_mana(self):
         """Calcula mana máxima total incluindo bônus de equipamentos"""
-        base_mana = 50
+        # Usa o max_mana da classe (já definido no __init__)
+        base_mana = 80 if self.player_class == "mago" else 50
         armor_bonus = 0
         
         if self.equipped_armor and hasattr(self.equipped_armor, 'mana_bonus'):
@@ -358,8 +386,16 @@ class Player:
     
     def equip_weapon(self, weapon):
         """Equipa uma arma (apenas uma por vez)"""
+        import copy
+        
+        # Se já tem arma equipada, devolve ao inventário
         if self.equipped_weapon:
-            print(f"\n{self.equipped_weapon.name} foi desequipada.")
+            self.inventory.append(copy.deepcopy(self.equipped_weapon))
+            print(f"\n{self.equipped_weapon.name} foi desequipada e retornou ao inventário.")
+        
+        # Remove a nova arma do inventário se estiver lá
+        if weapon in self.inventory:
+            self.inventory.remove(weapon)
         
         self.equipped_weapon = weapon
         print(f"\n✅ {weapon.name} equipada!")
@@ -367,8 +403,16 @@ class Player:
     
     def equip_shield(self, shield):
         """Equipa um escudo"""
+        import copy
+        
+        # Se já tem escudo equipado, devolve ao inventário
         if self.equipped_shield:
-            print(f"\n{self.equipped_shield.name} foi desequipado.")
+            self.inventory.append(copy.deepcopy(self.equipped_shield))
+            print(f"\n{self.equipped_shield.name} foi desequipado e retornou ao inventário.")
+        
+        # Remove o novo escudo do inventário se estiver lá
+        if shield in self.inventory:
+            self.inventory.remove(shield)
         
         self.equipped_shield = shield
         print(f"\n✅ {shield.name} equipado!")
@@ -376,10 +420,17 @@ class Player:
     
     def equip_armor(self, armor):
         """Equipa uma armadura"""
+        import copy
         old_max_mana = self.max_mana
         
+        # Se já tem armadura equipada, devolve ao inventário
         if self.equipped_armor:
-            print(f"\n{self.equipped_armor.name} foi desequipada.")
+            self.inventory.append(copy.deepcopy(self.equipped_armor))
+            print(f"\n{self.equipped_armor.name} foi desequipada e retornou ao inventário.")
+        
+        # Remove a nova armadura do inventário se estiver lá
+        if armor in self.inventory:
+            self.inventory.remove(armor)
         
         self.equipped_armor = armor
         
@@ -399,28 +450,38 @@ class Player:
     
     def unequip_weapon(self):
         """Remove a arma equipada"""
+        import copy
         if self.equipped_weapon:
             weapon = self.equipped_weapon
+            self.inventory.append(copy.deepcopy(weapon))
             self.equipped_weapon = None
-            print(f"\n{weapon.name} foi desequipada.")
+            print(f"\n{weapon.name} foi desequipada e retornou ao inventário.")
             return weapon
+        else:
+            print("\n❌ Você não tem arma equipada!")
         return None
     
     def unequip_shield(self):
         """Remove o escudo equipado"""
+        import copy
         if self.equipped_shield:
             shield = self.equipped_shield
+            self.inventory.append(copy.deepcopy(shield))
             self.equipped_shield = None
-            print(f"\n{shield.name} foi desequipado.")
+            print(f"\n{shield.name} foi desequipado e retornou ao inventário.")
             return shield
+        else:
+            print("\n❌ Você não tem escudo equipado!")
         return None
     
     def unequip_armor(self):
         """Remove a armadura equipada"""
+        import copy
         if self.equipped_armor:
             armor = self.equipped_armor
             old_max_mana = self.max_mana
             
+            self.inventory.append(copy.deepcopy(armor))
             self.equipped_armor = None
             
             # Recalcula mana máxima sem o equipamento
@@ -430,13 +491,15 @@ class Player:
             self.max_mana = new_max_mana
             self.mana = min(self.mana, self.max_mana)  # Ajusta mana se exceder o novo máximo
             
-            print(f"\n{armor.name} foi desequipada.")
+            print(f"\n{armor.name} foi desequipada e retornou ao inventário.")
             
             # Mostra perda de mana se houver
             if hasattr(armor, 'mana_bonus') and armor.mana_bonus > 0:
                 print(f"✨ Mana Máxima: -{armor.mana_bonus} ({self.mana}/{self.max_mana})")
             
             return armor
+        else:
+            print("\n❌ Você não tem armadura equipada!")
         return None
     
     def show_status(self):

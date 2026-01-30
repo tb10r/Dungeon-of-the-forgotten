@@ -318,13 +318,7 @@ def handle_equipment(player):
         player.unequip_shield()
     
     elif choice == "6":
-        # Desequipar armadura
-        if player.equipped_armor:
-            armor = player.equipped_armor
-            player.equipped_armor = None
-            print(f"\n{armor.name} foi desequipada.")
-        else:
-            print("\n❌ Você não tem armadura equipada!")
+        player.unequip_armor()
 
 
 def game_loop(player, world):

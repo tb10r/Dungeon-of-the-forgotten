@@ -180,6 +180,32 @@ necromancer_robe = Armor(
     mana_bonus=30
 )
 
+# Equipamento inicial para classes
+warrior_sword = Weapon(
+    name="Espada de Ferro do Guerreiro",
+    attack_bonus=6,
+    description="Uma espada sólida de ferro forjado, equilibrada para combate corpo a corpo."
+)
+
+warrior_armor = Armor(
+    name="Couro Reforçado do Guerreiro",
+    defense_bonus=4,
+    description="Armadura de couro reforçada com placas de metal, oferece boa proteção sem comprometer mobilidade."
+)
+
+mage_staff = Weapon(
+    name="Cajado Arcano do Aprendiz",
+    attack_bonus=4,
+    description="Um cajado de madeira imbuído com energia mágica, amplifica o poder dos feitiços."
+)
+
+mage_robe = Armor(
+    name="Manto do Aprendiz",
+    defense_bonus=2,
+    description="Manto leve imbuído com encantamentos de proteção básica e amplificação mágica.",
+    mana_bonus=20
+)
+
 Blackwarrior_sword = Weapon(
     name="Blackwarrior's Blade",
     attack_bonus=10,
@@ -240,3 +266,4 @@ necromancer_curser = Spell(
     power=70,
     spell_type="damage"
 )
+

@@ -462,6 +462,8 @@ class World:
             return []
         
         # Mapeia nome do item para instância
+        # NOTA: warrior_sword, warrior_armor, mage_staff e mage_robe NÃO estão aqui
+        # pois são equipamentos iniciais exclusivos (já equipados ao criar personagem)
         items_map = {
             "rusty_sword": rusty_sword,
             "simple_shield": simple_shield,
