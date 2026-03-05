@@ -1,0 +1,112 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-01-30T23:36:05.794547",
+  "player": {
+    "name": "Fofão",
+    "level": 3,
+    "xp": 59,
+    "max_hp": 90,
+    "hp": 90,
+    "strength": 5,
+    "vitality": 6,
+    "agility": 10,
+    "position": "8",
+    "inventory": [
+      {
+        "name": "Poção de Cura",
+        "type": "consumable",
+        "description": "Uma poção vermelha brilhante que restaura 30 HP.",
+        "attack_bonus": null,
+        "defense_bonus": null,
+        "heal_amount": 30
+      },
+      {
+        "name": "Espada Enferrujada",
+        "type": "weapon",
+        "description": "Uma espada velha, mas ainda afiada o suficiente.",
+        "attack_bonus": 3,
+        "defense_bonus": null,
+        "heal_amount": null
+      },
+      {
+        "name": "Poção de Cura",
+        "type": "consumable",
+        "description": "Uma poção vermelha brilhante que restaura 30 HP.",
+        "attack_bonus": null,
+        "defense_bonus": null,
+        "heal_amount": 30
+      },
+      {
+        "name": "Espada de Ferro do Guerreiro",
+        "type": "weapon",
+        "description": "Uma espada sólida de ferro forjado, equilibrada para combate corpo a corpo.",
+        "attack_bonus": 4,
+        "defense_bonus": null,
+        "heal_amount": null
+      },
+      {
+        "name": "Orbe Cristalino",
+        "type": "weapon",
+        "description": "Orbe que amplifica todas as magias.",
+        "attack_bonus": 1,
+        "defense_bonus": null,
+        "heal_amount": null
+      },
+      {
+        "name": "Machado de Batalha",
+        "type": "weapon",
+        "description": "Um machado pesado que causa grande dano.",
+        "attack_bonus": 6,
+        "defense_bonus": null,
+        "heal_amount": null
+      },
+      {
+        "name": "Runa de Invocação",
+        "type": "rune",
+        "description": "Uma runa negra pulsante com símbolos místicos. Emite uma energia sombria parece chamar para o altar sombrio.",
+        "attack_bonus": null,
+        "defense_bonus": null,
+        "heal_amount": null
+      },
+      {
+        "name": "espátula do Butcher",
+        "type": "weapon",
+        "description": "Uma espátula grande e afiada, usada pelo Mestre Butcher em suas batalhas e criações culinárias.",
+        "attack_bonus": 4,
+        "defense_bonus": null,
+        "heal_amount": null
+      }
+    ],
+    "equipped_weapon": {
+      "name": "Espada Flamejante",
+      "attack_bonus": 7
+    },
+    "equipped_shield": {
+      "name": "Escudo Simples",
+      "defense_bonus": 2
+    }
+  },
+  "world": {
+    "visited_rooms": [
+      "3",
+      "1",
+      "10",
+      "7",
+      "8",
+      "2",
+      "11",
+      "9"
+    ],
+    "defeated_enemies": [
+      "3",
+      "8",
+      "9"
+    ],
+    "looted_rooms": [
+      "3",
+      "7",
+      "8",
+      "10"
+    ]
+  }
+}

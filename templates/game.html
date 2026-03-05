@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogando - Dungeon of the Forgotten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="game-screen">
+    <div class="game-container">
+        <!-- HUD Superior -->
+        <div class="hud-top">
+            <div class="player-info">
+                <h2 id="playerName">Carregando...</h2>
+                <span id="playerClass" class="player-class"></span>
+                <span id="playerLevel" class="player-level"></span>
+                <span id="skillPointsIndicator" class="skill-points-indicator" style="display:none;">
+                    🌟 <span id="skillPointsCount">0</span> Ponto(s) de Habilidade
+                </span>
+            </div>
+            
+            <div class="player-stats">
+                <div class="stat-bar">
+                    <span class="stat-label">❤️ HP</span>
+                    <div class="bar-container">
+                        <div id="hpBar" class="bar hp-bar"></div>
+                        <span id="hpText" class="bar-text">0/0</span>
+                    </div>
+                </div>
+                
+                <div class="stat-bar">
+                    <span class="stat-label">💧 Mana</span>
+                    <div class="bar-container">
+                        <div id="manaBar" class="bar mana-bar"></div>
+                        <span id="manaText" class="bar-text">0/0</span>
+                    </div>
+                </div>
+                
+                <div class="stat-bar">
+                    <span class="stat-label">⭐ XP</span>
+                    <div class="bar-container">
+                        <div id="xpBar" class="bar xp-bar"></div>
+                        <span id="xpText" class="bar-text">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Área Principal do Jogo -->
+        <div class="game-main">
+            <!-- Painel Esquerdo - Informações da Sala -->
+            <div class="game-left">
+                <div class="room-display">
+                    <h3 id="roomName" class="room-name">Sala Inicial</h3>
+                    <div id="roomType" class="room-type"></div>
+                    <p id="roomDescription" class="room-description">
+                        Carregando descrição da sala...
+                    </p>
+                    
+                    <div id="roomStatus" class="room-status"></div>
+                    
+                    <div class="directions">
+                        <h4>🚪 Saídas Disponíveis:</h4>
+                        <div id="directionButtons" class="direction-buttons">
+                            <!-- Botões de direção serão adicionados aqui -->
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="action-buttons">
+                    <button class="btn btn-action" onclick="window.location.href='/skills'">
+                        🌟 Habilidades
+                    </button>
+                    <button class="btn btn-action" onclick="openInventory()">
+                        🎒 Inventário
+                    </button>
+                    <button class="btn btn-action" onclick="openStatus()">
+                        📊 Status
+                    </button>
+                    <button class="btn btn-action" onclick="openMap()">
+                        🗺️ Mapa
+                    </button>
+                    <button class="btn btn-action btn-danger" onclick="if(confirm('Deseja voltar ao menu principal?')) window.location.href='/'">
+                        🚪 Sair
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Painel Direito - Equipamentos e Ações -->
+            <div class="game-right">
+                <div class="equipment-panel">
+                    <h3>⚔️ Equipamento</h3>
+                    <div class="equipment-slots">
+                        <div class="equipment-slot">
+                            <span class="slot-icon">🗡️</span>
+                            <div class="slot-info">
+                                <span class="slot-label">Arma:</span>
+                                <span id="equippedWeapon" class="slot-value">Nenhuma</span>
+                            </div>
+                        </div>
+                        
+                        <div class="equipment-slot">
+                            <span class="slot-icon">🛡️</span>
+                            <div class="slot-info">
+                                <span class="slot-label">Escudo:</span>
+                                <span id="equippedShield" class="slot-value">Nenhum</span>
+                            </div>
+                        </div>
+                        
+                        <div class="equipment-slot">
+                            <span class="slot-icon">👕</span>
+                            <div class="slot-info">
+                                <span class="slot-label">Armadura:</span>
+                                <span id="equippedArmor" class="slot-value">Nenhuma</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="log-panel">
+                    <h3>📜 Log de Eventos</h3>
+                    <div id="gameLog" class="game-log">
+                        <div class="log-entry">Bem-vindo à dungeon...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Estado do jogo
+        let gameState = null;
+        
+        // Carregar estado do jogo
+        async function loadGameState() {
+            try {
+                const response = await fetch('/api/game_state');
+                const data = await response.json();
+                
+                if (data.error) {
+                    alert('Erro: ' + data.error);
+                    window.location.href = '/';
+                    return;
+                }
+                
+                gameState = data;
+                updateUI();
+            } catch (error) {
+                console.error('Erro ao carregar estado:', error);
+                addLog('❌ Erro ao carregar estado do jogo!', 'error');
+            }
+        }
+        
+        // Atualizar interface
+        function updateUI() {
+            if (!gameState) return;
+            
+            const { player, room, directions } = gameState;
+            
+            // Atualizar informações do jogador
+            document.getElementById('playerName').textContent = player.name;
+            document.getElementById('playerClass').textContent = 
+                player.class === 'guerreiro' ? '⚔️ Guerreiro' : '🔮 Mago';
+            document.getElementById('playerLevel').textContent = `Nível ${player.level}`;
+            
+            // Atualizar skill points
+            const skillPointsIndicator = document.getElementById('skillPointsIndicator');
+            const skillPointsCount = document.getElementById('skillPointsCount');
+            if (player.skill_points && player.skill_points > 0) {
+                skillPointsIndicator.style.display = 'inline-block';
+                skillPointsCount.textContent = player.skill_points;
+            } else {
+                skillPointsIndicator.style.display = 'none';
+            }
+            
+            // Atualizar barras
+            updateBar('hpBar', 'hpText', player.hp, player.max_hp, 'HP');
+            updateBar('manaBar', 'manaText', player.mana, player.max_mana, 'Mana');
+            document.getElementById('xpText').textContent = player.xp;
+            
+            // Atualizar equipamentos
+            document.getElementById('equippedWeapon').textContent = player.equipped_weapon || 'Nenhuma';
+            document.getElementById('equippedShield').textContent = player.equipped_shield || 'Nenhum';
+            document.getElementById('equippedArmor').textContent = player.equipped_armor || 'Nenhuma';
+            
+            // Atualizar sala
+            document.getElementById('roomName').textContent = room.name;
+            document.getElementById('roomDescription').textContent = room.description;
+            
+            // Tipo de sala
+            let roomTypeIcon = '';
+            switch(room.type) {
+                case 'enemy': roomTypeIcon = '⚔️ Sala com Inimigo'; break;
+                case 'treasure': roomTypeIcon = '💎 Baú de Tesouro'; break;
+                case 'boss': roomTypeIcon = '👑 Sala do Boss'; break;
+                case 'exit': roomTypeIcon = '🚪 Saída'; break;
+                default: roomTypeIcon = '🏛️ Sala Normal';
+            }
+            document.getElementById('roomType').textContent = roomTypeIcon;
+            
+            // Status da sala
+            let statusHTML = '';
+            if (room.has_enemy) {
+                statusHTML += '<div class="status-warning">⚠️ Há um inimigo nesta sala!</div>';
+                statusHTML += '<button class="btn btn-action" style="background: linear-gradient(135deg, #dc143c, #8b0000); width: 100%; margin-top: 10px;" onclick="startCombat()">⚔️ Iniciar Combate</button>';
+            }
+            if (room.has_treasure) {
+                statusHTML += '<div class="status-info">💎 Há um baú aqui!</div>';
+            }
+            document.getElementById('roomStatus').innerHTML = statusHTML;
+            
+            // Atualizar botões de direção
+            updateDirectionButtons(directions);
+        }
+        
+        // Atualizar barra
+        function updateBar(barId, textId, current, max, label) {
+            const percentage = (current / max) * 100;
+            document.getElementById(barId).style.width = percentage + '%';
+            document.getElementById(textId).textContent = `${current}/${max}`;
+        }
+        
+        // Atualizar botões de direção
+        function updateDirectionButtons(directions) {
+            const container = document.getElementById('directionButtons');
+            container.innerHTML = '';
+            
+            const directionIcons = {
+                'norte': '⬆️',
+                'sul': '⬇️',
+                'leste': '➡️',
+                'oeste': '⬅️'
+            };
+            
+            directions.forEach(dir => {
+                const btn = document.createElement('button');
+                btn.className = 'btn btn-direction';
+                btn.textContent = `${directionIcons[dir] || '🚪'} ${dir.toUpperCase()}`;
+                btn.onclick = () => movePlayer(dir);
+                container.appendChild(btn);
+            });
+        }
+        
+        // Mover jogador
+        async function movePlayer(direction) {
+            try {
+                const response = await fetch('/api/move', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ direction })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    addLog(`➡️ ${data.message}`);
+                    await loadGameState();
+                } else {
+                    addLog(`❌ ${data.message}`, 'error');
+                }
+            } catch (error) {
+                console.error('Erro ao mover:', error);
+                addLog('❌ Erro ao mover!', 'error');
+            }
+        }
+        
+        // Adicionar entrada no log
+        function addLog(message, type = 'info') {
+            const logDiv = document.getElementById('gameLog');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = message;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            // Limitar a 50 entradas
+            while (logDiv.children.length > 50) {
+                logDiv.removeChild(logDiv.firstChild);
+            }
+        }
+        
+        // Funções de modal (placeholder)
+        async function startCombat() {
+            try {
+                const response = await fetch('/api/combat/start', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redireciona para tela de combate
+                    window.location.href = '/combat';
+                } else {
+                    addLog('❌ ' + data.message);
+                }
+            } catch (error) {
+                console.error('Erro ao iniciar combate:', error);
+                addLog('❌ Erro ao iniciar combate!');
+            }
+        }
+        
+        function openInventory() {
+            alert('Sistema de inventário em desenvolvimento!');
+        }
+        
+        function openStatus() {
+            alert('Sistema de status em desenvolvimento!');
+        }
+        
+        function openMap() {
+            alert('Sistema de mapa em desenvolvimento!');
+        }
+        
+        // Inicializar ao carregar a página
+        window.onload = async () => {
+            addLog('🎮 Bem-vindo à aventura!');
+            await loadGameState();
+        };
+        
+        // Atualizar automaticamente a cada 5 segundos
+        setInterval(loadGameState, 5000);
+    </script>
+</body>
+</html>

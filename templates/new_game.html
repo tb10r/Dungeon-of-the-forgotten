@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Novo Jogo - Dungeon of the Forgotten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="character-creation">
+            <h1 class="page-title">⚔️ CRIAR PERSONAGEM ⚔️</h1>
+            
+            <div class="creation-form">
+                <div class="form-group">
+                    <label for="name">Nome do Herói:</label>
+                    <input type="text" id="name" placeholder="Digite o nome..." maxlength="20">
+                </div>
+                
+                <div class="form-group">
+                    <label>Escolha sua Classe:</label>
+                    
+                    <div class="class-selection">
+                        <div class="class-card" data-class="guerreiro">
+                            <div class="class-icon">⚔️</div>
+                            <h3>Guerreiro</h3>
+                            <ul class="class-stats">
+                                <li>✓ +30% dano corpo a corpo</li>
+                                <li>✓ Mais HP e Força</li>
+                                <li>✗ -20% dano mágico</li>
+                            </ul>
+                            <div class="class-description">
+                                Mestre em combate corpo a corpo. Equipado com espada e armadura resistente.
+                            </div>
+                        </div>
+                        
+                        <div class="class-card" data-class="mago">
+                            <div class="class-icon">🔮</div>
+                            <h3>Mago</h3>
+                            <ul class="class-stats">
+                                <li>✓ +50% dano mágico</li>
+                                <li>✓ +30 Mana (80 total)</li>
+                                <li>✓ Começa com Raio Elétrico</li>
+                                <li>✗ -30% dano físico</li>
+                            </ul>
+                            <div class="class-description">
+                                Manipulador de energias arcanas. Equipado com cajado mágico e manto encantado.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button onclick="window.location.href='/'" class="btn btn-secondary">
+                        ← Voltar
+                    </button>
+                    <button onclick="startGame()" class="btn btn-primary" id="startBtn" disabled>
+                        Começar Aventura →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let selectedClass = null;
+        
+        // Seleção de classe
+        document.querySelectorAll('.class-card').forEach(card => {
+            card.addEventListener('click', () => {
+                document.querySelectorAll('.class-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedClass = card.dataset.class;
+                updateStartButton();
+            });
+        });
+        
+        // Atualizar botão de começar
+        document.getElementById('name').addEventListener('input', updateStartButton);
+        
+        function updateStartButton() {
+            const name = document.getElementById('name').value.trim();
+            const startBtn = document.getElementById('startBtn');
+            
+            if (name && selectedClass) {
+                startBtn.disabled = false;
+            } else {
+                startBtn.disabled = true;
+            }
+        }
+        
+        // Iniciar jogo
+        async function startGame() {
+            const name = document.getElementById('name').value.trim() || 'Aventureiro';
+            
+            if (!selectedClass) {
+                alert('Por favor, escolha uma classe!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/new_game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: name,
+                        class: selectedClass
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.location.href = '/game';
+                } else {
+                    alert('Erro ao criar personagem!');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                alert('Erro ao conectar com o servidor!');
+            }
+        }
+    </script>
+</body>
+</html>

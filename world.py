@@ -557,7 +557,7 @@ class World:
 
     def process_room_events(self, player):
         """Processa eventos da sala atual (combate, tesouros, etc)"""
-        from combat import Combat
+        from combat_pa import CombatPA
         
         room_id = player.position
         room = self.get_room(room_id)
@@ -592,8 +592,8 @@ class World:
                     enemy = Necromancer()
                     print(f"\n{enemy.description}")
                     
-                    from combat import Combat
-                    combat = Combat(player, enemy)
+                    from combat_pa import CombatPA
+                    combat = CombatPA(player, enemy)
                     result = combat.run_combat()
                     
                     if result["result"] == "victory":
@@ -663,7 +663,7 @@ class World:
                     enemy = Blackwarrior()
                     print(f"\n{enemy.description}")
                     
-                    combat = Combat(player, enemy)
+                    combat = CombatPA(player, enemy)
                     result = combat.run_combat()
                     
                     if result["result"] == "victory":
@@ -723,7 +723,7 @@ class World:
                 print(f"{'='*60}")
                 print(f"{enemy.description}")
                 
-                combat = Combat(player, enemy)
+                combat = CombatPA(player, enemy)
                 result = combat.run_combat()
                 
                 if result["result"] == "defeat":
@@ -802,7 +802,7 @@ class World:
                     }
                 
                 # Inicia combate
-                combat = Combat(player, enemy)
+                combat = CombatPA(player, enemy)
                 result = combat.run_combat()
                 
                 if result["result"] == "victory":

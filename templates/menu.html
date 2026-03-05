@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dungeon of the Forgotten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="menu-container">
+            <h1 class="game-title">⚔️ DUNGEON OF THE FORGOTTEN ⚔️</h1>
+            <p class="game-subtitle">Uma Aventura Épica Te Aguarda</p>
+            
+            <div class="menu-buttons">
+                <a href="{{ url_for('new_game') }}" class="menu-btn btn-new">
+                    🎮 NOVO JOGO
+                </a>
+                
+                <a href="{{ url_for('saves') }}" class="menu-btn btn-load">
+                    📂 CARREGAR JOGO
+                </a>
+                
+                <a href="https://github.com/tb10r/Dungeon-of-the-forgotten" class="menu-btn btn-info" target="_blank">
+                    ℹ️ SOBRE
+                </a>
+                
+                <button class="menu-btn btn-exit" onclick="window.close()">
+                    🚪 SAIR
+                </button>
+            </div>
+            
+            <div class="version">v2.0 - Web Edition</div>
+        </div>
+    </div>
+</body>
+</html>

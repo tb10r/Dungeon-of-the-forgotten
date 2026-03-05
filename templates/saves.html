@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carregar Jogo - Dungeon of the Forgotten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="character-creation">
+            <h1 class="page-title">📂 CARREGAR JOGO</h1>
+            
+            {% if saves %}
+                <div class="saves-list">
+                    {% for save in saves %}
+                    <div class="save-card">
+                        <div class="save-icon">💾</div>
+                        <div class="save-info">
+                            <h3>{{ save.player }}</h3>
+                            <p>Nível {{ save.level }}</p>
+                            <p class="save-date">{{ save.timestamp }}</p>
+                        </div>
+                        <button class="btn btn-primary" onclick="loadSave('{{ save.filename }}')">
+                            Carregar
+                        </button>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-saves">
+                    <p>😕 Nenhum save encontrado!</p>
+                    <p>Comece um novo jogo para criar um save.</p>
+                </div>
+            {% endif %}
+            
+            <div class="form-actions">
+                <button onclick="window.location.href='/'" class="btn btn-secondary">
+                    ← Voltar ao Menu
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function loadSave(filename) {
+            alert('Sistema de carregamento em desenvolvimento!\nArquivo: ' + filename);
+            // TODO: Implementar carregamento de save
+        }
+    </script>
+    
+    <style>
+        .saves-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .save-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid #FFD700;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        .save-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .save-icon {
+            font-size: 3rem;
+        }
+        
+        .save-info {
+            flex: 1;
+        }
+        
+        .save-info h3 {
+            color: #FFD700;
+            margin-bottom: 5px;
+        }
+        
+        .save-info p {
+            color: #ccc;
+            margin: 3px 0;
+        }
+        
+        .save-date {
+            font-size: 0.85rem;
+            color: #999;
+        }
+        
+        .no-saves {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+        
+        .no-saves p {
+            margin: 10px 0;
+            font-size: 1.1rem;
+        }
+    </style>
+</body>
+</html>

@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Árvore de Habilidades - RPG</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .skill-tree-container {
+            width: 100%;
+            height: 100vh;
+            background: radial-gradient(circle at 50% 50%, #1a1a2e, #0f0f1a);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .skill-tree-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #1e1e2f, #16213e);
+            border-bottom: 2px solid #ffd700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .skill-points-display {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #1a1a2e;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .back-button {
+            background: linear-gradient(135deg, #dc143c, #8b0000);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 15px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .back-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(220, 20, 60, 0.5);
+        }
+
+        .skill-tree-canvas {
+            width: 100%;
+            height: calc(100vh - 100px);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 50px 20px;
+            overflow-y: auto;
+        }
+
+        .path-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 100px;
+            max-width: 1800px;
+            width: 100%;
+            position: relative;
+        }
+
+        .skill-path {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 80px;
+            position: relative;
+        }
+
+        .path-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .skill-node {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 10px;
+            z-index: 10;
+        }
+
+        .skill-node::before {
+            content: '';
+            position: absolute;
+            width: 110%;
+            height: 110%;
+            border-radius: 50%;
+            z-index: -1;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+
+        .skill-node.locked {
+            background: linear-gradient(135deg, #2d2d44, #1a1a2e);
+            border: 3px solid #4a4a6a;
+            color: #666;
+        }
+
+        .skill-node.available {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            border: 3px solid #fff;
+            color: #1a1a2e;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: glow 2s infinite;
+        }
+
+        .skill-node.available::before {
+            background: radial-gradient(circle, rgba(255, 215, 0, 0.3), transparent);
+            opacity: 1;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+        }
+
+        .skill-node.unlocked {
+            background: linear-gradient(135deg, #00ff88, #00cc66);
+            border: 3px solid #00ffaa;
+            color: #1a1a2e;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+        }
+
+        .skill-node.ultimate {
+            width: 150px;
+            height: 150px;
+            border-width: 5px;
+        }
+
+        .skill-node:hover {
+            transform: scale(1.1);
+        }
+
+        .skill-node:hover::before {
+            opacity: 1;
+        }
+
+        .skill-name {
+            font-size: 0.85em;
+            font-weight: bold;
+            line-height: 1.2;
+            margin-top: 5px;
+        }
+
+        .skill-tier {
+            font-size: 0.7em;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+
+        .skill-icon {
+            font-size: 2em;
+        }
+
+        .ultimate .skill-icon {
+            font-size: 2.5em;
+        }
+
+        .connection-line {
+            position: absolute;
+            background: linear-gradient(to bottom, #4a4a6a, #2d2d44);
+            width: 3px;
+            height: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            top: -80px;
+            z-index: 1;
+        }
+
+        .connection-line.unlocked {
+            background: linear-gradient(to bottom, #00ff88, #00cc66);
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+
+        .skill-tooltip {
+            position: fixed;
+            background: rgba(26, 26, 46, 0.98);
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 350px;
+            z-index: 1000;
+            pointer-events: none;
+            display: none;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+        }
+
+        .skill-tooltip.show {
+            display: block;
+        }
+
+        .tooltip-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .tooltip-description {
+            color: #ccc;
+            margin-bottom: 15px;
+            line-height: 1.5;
+        }
+
+        .tooltip-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .tooltip-stat {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 5px 10px;
+            border-radius: 5px;
+        }
+
+        .tooltip-requirements {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #4a4a6a;
+            color: #ff6b6b;
+            font-size: 0.9em;
+        }
+
+        .unlock-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #1e1e2f, #16213e);
+            border: 3px solid #ffd700;
+            border-radius: 20px;
+            padding: 30px 50px;
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+            display: none;
+            z-index: 2000;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+            animation: unlock-appear 0.5s ease-out;
+        }
+
+        @keyframes unlock-appear {
+            from {
+                transform: translate(-50%, -50%) scale(0);
+                opacity: 0;
+            }
+            to {
+                transform: translate(-50%, -50%) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .unlock-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="skill-tree-container">
+        <div class="skill-tree-header">
+            <a href="/game" class="back-button">← Voltar ao Jogo</a>
+            <h1 style="color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); margin: 0;">
+                🌟 ÁRVORE DE HABILIDADES
+            </h1>
+            <div class="skill-points-display">
+                ⭐ <span id="skillPoints">0</span> Pontos Disponíveis
+            </div>
+        </div>
+
+        <div class="skill-tree-canvas">
+            <div id="pathsContainer" class="path-container">
+                <!-- Árvore será gerada dinamicamente -->
+            </div>
+        </div>
+
+        <div id="skillTooltip" class="skill-tooltip">
+            <div class="tooltip-title" id="tooltipTitle"></div>
+            <div class="tooltip-description" id="tooltipDescription"></div>
+            <div class="tooltip-stats" id="tooltipStats"></div>
+            <div class="tooltip-requirements" id="tooltipRequirements"></div>
+        </div>
+
+        <div id="unlockMessage" class="unlock-message"></div>
+    </div>
+
+    <script>
+        let skillsData = {};
+        let playerClass = '';
+        let skillPoints = 0;
+        let unlockedSkills = [];
+
+        const pathNames = {
+            'guerreiro': {
+                'tanque': { name: '🛡️ TANQUE', icon: '🛡️' },
+                'dps': { name: '⚔️ DPS', icon: '⚔️' },
+                'berserker': { name: '🔥 BERSERKER', icon: '🔥' }
+            },
+            'mago': {
+                'fogo': { name: '🔥 FOGO', icon: '🔥' },
+                'gelo': { name: '❄️ GELO', icon: '❄️' },
+                'arcano': { name: '✨ ARCANO', icon: '✨' }
+            }
+        };
+
+        const tierIcons = {
+            1: '⭐',
+            2: '💫',
+            3: '🌟',
+            'ultimate': '👑'
+        };
+
+        async function loadSkillTree() {
+            const response = await fetch('/api/skills');
+            const data = await response.json();
+            
+            skillsData = data.skills;
+            playerClass = data.player_class;
+            skillPoints = data.skill_points;
+            unlockedSkills = data.unlocked_skills;
+            
+            document.getElementById('skillPoints').textContent = skillPoints;
+            
+            renderSkillTree();
+        }
+
+        function renderSkillTree() {
+            const container = document.getElementById('pathsContainer');
+            container.innerHTML = '';
+            
+            const paths = Object.keys(skillsData);
+            
+            paths.forEach(pathKey => {
+                const pathDiv = document.createElement('div');
+                pathDiv.className = 'skill-path';
+                
+                // Header do caminho
+                const header = document.createElement('div');
+                header.className = 'path-header';
+                header.textContent = pathNames[playerClass][pathKey].name;
+                pathDiv.appendChild(header);
+                
+                // Ordenar skills por tier
+                const skills = skillsData[pathKey].sort((a, b) => {
+                    const tierOrder = { 1: 1, 2: 2, 3: 3, 'ultimate': 4 };
+                    return tierOrder[a.tier] - tierOrder[b.tier];
+                });
+                
+                // Criar nodes
+                skills.forEach((skill, index) => {
+                    const node = createSkillNode(skill);
+                    
+                    // Adicionar linha de conexão (exceto primeira skill)
+                    if (index > 0) {
+                        const line = document.createElement('div');
+                        line.className = 'connection-line';
+                        if (skill.unlocked || skills[index - 1].unlocked) {
+                            line.classList.add('unlocked');
+                        }
+                        node.appendChild(line);
+                    }
+                    
+                    pathDiv.appendChild(node);
+                });
+                
+                container.appendChild(pathDiv);
+            });
+        }
+
+        function createSkillNode(skill) {
+            const node = document.createElement('div');
+            node.className = 'skill-node';
+            
+            if (skill.tier === 'ultimate') {
+                node.classList.add('ultimate');
+            }
+            
+            if (skill.unlocked) {
+                node.classList.add('unlocked');
+            } else if (skill.can_unlock && skillPoints > 0) {
+                node.classList.add('available');
+            } else {
+                node.classList.add('locked');
+            }
+            
+            node.innerHTML = `
+                <div class="skill-tier">${skill.tier === 'ultimate' ? 'ULTIMATE' : 'Tier ' + skill.tier}</div>
+                <div class="skill-icon">${tierIcons[skill.tier]}</div>
+                <div class="skill-name">${skill.name}</div>
+            `;
+            
+            // Eventos
+            node.addEventListener('mouseenter', (e) => showTooltip(skill, e));
+            node.addEventListener('mousemove', (e) => moveTooltip(e));
+            node.addEventListener('mouseleave', hideTooltip);
+            node.addEventListener('click', () => attemptUnlock(skill));
+            
+            return node;
+        }
+
+        function showTooltip(skill, event) {
+            const tooltip = document.getElementById('skillTooltip');
+            const title = document.getElementById('tooltipTitle');
+            const description = document.getElementById('tooltipDescription');
+            const stats = document.getElementById('tooltipStats');
+            const requirements = document.getElementById('tooltipRequirements');
+            
+            title.textContent = skill.name;
+            description.textContent = skill.description;
+            
+            stats.innerHTML = `
+                <div class="tooltip-stat">💧 Custo: ${skill.cost_mana} mana</div>
+                <div class="tooltip-stat">⏱️ CD: ${skill.cooldown} turnos</div>
+                <div class="tooltip-stat">⚡ Tipo: ${skill.is_passive ? 'Passiva' : 'Ativa'}</div>
+                <div class="tooltip-stat">🎯 Poder: ${skill.power}</div>
+            `;
+            
+            if (skill.requirements && skill.requirements.length > 0 && !skill.unlocked) {
+                const reqNames = skill.requirements.map(reqId => {
+                    for (let path in skillsData) {
+                        const found = skillsData[path].find(s => s.id === reqId);
+                        if (found) return found.name;
+                    }
+                    return reqId;
+                });
+                requirements.innerHTML = `⚠️ Requer: ${reqNames.join(', ')}`;
+                requirements.style.display = 'block';
+            } else {
+                requirements.style.display = 'none';
+            }
+            
+            tooltip.classList.add('show');
+            moveTooltip(event);
+        }
+
+        function moveTooltip(event) {
+            const tooltip = document.getElementById('skillTooltip');
+            tooltip.style.left = (event.clientX + 20) + 'px';
+            tooltip.style.top = (event.clientY + 20) + 'px';
+        }
+
+        function hideTooltip() {
+            document.getElementById('skillTooltip').classList.remove('show');
+        }
+
+        async function attemptUnlock(skill) {
+            if (skill.unlocked) {
+                showMessage('Habilidade já desbloqueada!', 'error');
+                return;
+            }
+            
+            if (skillPoints <= 0) {
+                showMessage('Sem pontos de habilidade!', 'error');
+                return;
+            }
+            
+            if (!skill.can_unlock) {
+                showMessage('Você precisa desbloquear habilidades anteriores!', 'error');
+                return;
+            }
+            
+            const response = await fetch('/api/skills/unlock', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ skill_id: skill.id })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showMessage(`✨ ${skill.name} desbloqueada!`, 'success');
+                skillPoints = data.skill_points;
+                unlockedSkills = data.unlocked_skills;
+                document.getElementById('skillPoints').textContent = skillPoints;
+                
+                // Recarregar árvore
+                setTimeout(() => {
+                    loadSkillTree();
+                }, 1000);
+            } else {
+                showMessage(data.message, 'error');
+            }
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('unlockMessage');
+            messageDiv.textContent = message;
+            messageDiv.style.color = type === 'success' ? '#00ff88' : '#ff6b6b';
+            messageDiv.style.borderColor = type === 'success' ? '#00ff88' : '#ff6b6b';
+            messageDiv.classList.add('show');
+            
+            setTimeout(() => {
+                messageDiv.classList.remove('show');
+            }, 2000);
+        }
+
+        // Carregar ao iniciar
+        loadSkillTree();
+    </script>
+</body>
+</html>

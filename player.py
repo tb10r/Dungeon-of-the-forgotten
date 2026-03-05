@@ -34,12 +34,15 @@ class Player:
             self.max_mana = 50  # Guerreiro tem mana padrão
         
         self.mana = self.max_mana
-        self.known_spells = []  # Lista de magias aprendidas
         
-        # Mago começa com uma magia inicial
-        if player_class == "mago":
-            from items import lightning_bolt
-            self.known_spells.append(lightning_bolt)
+        # Sistema de Árvore de Habilidades (NOVO)
+        from skill_tree import SkillTree
+        self.skill_tree = SkillTree(player_class)
+        self.skill_points = 0  # Pontos disponíveis para gastar
+        self.unlocked_skills = []  # IDs das skills desbloqueadas
+        
+        # Sistema antigo de magias (manter por compatibilidade por enquanto)
+        self.known_spells = []  # DEPRECATED - migrar para skill_tree
         
         self.inventory = []
         self.position = "1"
@@ -132,6 +135,10 @@ class Player:
         print(f"✨ Você subiu para o nível {self.level}! ✨")
         print(f"{'='*50}")
         print("Você ganhou 3 pontos de atributo para distribuir!")
+        print(f"🌟 +1 Ponto de Habilidade! (Total: {self.skill_points + 1})")
+        
+        # Ganha 1 ponto de habilidade por level
+        self.skill_points += 1
         
         #salva o hp maximo atual antes de distribuir os pontos
         old_max_hp = self.max_hp
@@ -548,9 +555,143 @@ class Player:
             if self.equipped_armor:
                 print(f"  🛡️  {self.equipped_armor.name} (+{self.equipped_armor.defense_bonus} Defesa)")
         
+        # Sistema de Skills
+        if self.unlocked_skills:
+            print(f"\n🌟 Habilidades Desbloqueadas:")
+            for skill_id in self.unlocked_skills:
+                skill = self.skill_tree.get_skill(skill_id)
+                if skill:
+                    cooldown_text = f" (CD: {skill.current_cooldown})" if skill.current_cooldown > 0 else ""
+                    print(f"  ⚡ {skill.name}{cooldown_text}")
+        
+        if self.skill_points > 0:
+            print(f"\n🌟 Pontos de Habilidade Disponíveis: {self.skill_points}")
+        
+        # Sistema antigo (manter por compatibilidade)
         if self.known_spells:
-            print(f"\n✨ Magias Conhecidas:")
+            print(f"\n✨ Magias Conhecidas (Sistema Antigo):")
             for spell in self.known_spells:
                 print(f"  🔮 {spell.name} (Custo: {spell.mana_cost} mana)")
+    
+    # ==== SISTEMA DE SKILLS ====
+    
+    def unlock_skill(self, skill_id):
+        """Desbloqueia uma habilidade se possível"""
+        if skill_id in self.unlocked_skills:
+            return False, "Habilidade já desbloqueada!"
+        
+        if self.skill_points <= 0:
+            return False, "Sem pontos de habilidade disponíveis!"
+        
+        skill = self.skill_tree.get_skill(skill_id)
+        if not skill:
+            return False, "Habilidade não encontrada!"
+        
+        # Verifica requisitos
+        if not skill.can_unlock(self.unlocked_skills):
+            return False, "Você precisa desbloquear habilidades anteriores primeiro!"
+        
+        # Desbloqueia
+        self.unlocked_skills.append(skill_id)
+        self.skill_points -= 1
+        
+        return True, f"✨ {skill.name} desbloqueada!"
+    
+    def use_skill(self, skill_id, target=None):
+        """Usa uma habilidade"""
+        if skill_id not in self.unlocked_skills:
+            return False, "Você não possui esta habilidade!"
+        
+        skill = self.skill_tree.get_skill(skill_id)
+        if not skill:
+            return False, "Habilidade não encontrada!"
+        
+        if skill.is_passive:
+            return False, "Esta é uma habilidade passiva!"
+        
+        # Tenta usar a skill
+        success, error_msg = skill.use(self, target)
+        
+        if not success:
+            return False, error_msg
+        
+        return True, skill
+    
+    def tick_skill_cooldowns(self):
+        """Reduz cooldown de todas as skills em 1"""
+        for skill_id in self.unlocked_skills:
+            skill = self.skill_tree.get_skill(skill_id)
+            if skill:
+                skill.tick_cooldown()
+    
+    def get_passive_bonuses(self):
+        """Retorna todos os bônus passivos ativos"""
+        bonuses = {
+            'crit_chance': 0,
+            'damage_multiplier': 1.0,
+            'defense_multiplier': 1.0,
+            'lifesteal': 0,
+            'hp_regen': 0,
+            'mana_cost_reduction': 0
+        }
+        
+        for skill_id in self.unlocked_skills:
+            skill = self.skill_tree.get_skill(skill_id)
+            if skill and skill.is_passive:
+                # Aplicar bônus baseado na skill
+                if "Mestre de Armas" in skill.name:
+                    bonuses['crit_chance'] += skill.power
+                elif "Fúria Crescente" in skill.name:
+                    # HP baixo = mais dano
+                    hp_percent = self.hp / self.max_hp
+                    damage_bonus = (1.0 - hp_percent) * skill.power
+                    bonuses['damage_multiplier'] += damage_bonus / 100
+                elif "Sede de Sangue" in skill.name:
+                    bonuses['lifesteal'] += skill.power
+                elif "Escudo Vivo" in skill.name:
+                    bonuses['hp_regen'] = skill.power * self.max_hp
+                elif "Maestria Arcana" in skill.name:
+                    bonuses['mana_cost_reduction'] = skill.power
+                elif "Combustão Interna" in skill.name:
+                    bonuses['damage_multiplier'] += skill.power
+        
+        return bonuses
+    
+    def show_skill_tree(self):
+        """Mostra a árvore de habilidades"""
+        print(f"\n{'='*60}")
+        print(f"🌟 ÁRVORE DE HABILIDADES - {self.player_class.upper()}")
+        print(f"{'='*60}")
+        print(f"Pontos Disponíveis: {self.skill_points}")
+        print()
+        
+        # Organizar por caminho
+        if self.player_class == "guerreiro":
+            paths = ["tanque", "dps", "berserker"]
+            path_names = {"tanque": "TANQUE 🛡️", "dps": "DPS ⚔️", "berserker": "BERSERKER 🔥"}
+        else:
+            paths = ["fogo", "gelo", "arcano"]
+            path_names = {"fogo": "FOGO 🔥", "gelo": "GELO ❄️", "arcano": "ARCANO ✨"}
+        
+        for path in paths:
+            print(f"\n═══ {path_names[path]} ═══")
+            skills = self.skill_tree.get_skills_by_path(path)
+            
+            for skill_id, skill in sorted(skills.items(), key=lambda x: (x[1].tier if x[1].tier != "ultimate" else 99, x[1].name)):
+                unlocked = "✓" if skill_id in self.unlocked_skills else "✗"
+                can_unlock = skill.can_unlock(self.unlocked_skills)
+                
+                tier_text = f"[Tier {skill.tier}]" if skill.tier != "ultimate" else "[ULTIMATE]"
+                status = "🔓" if skill_id in self.unlocked_skills else ("🔒" if not can_unlock else "⭕")
+                
+                print(f"{status} {unlocked} {tier_text} {skill.name}")
+                print(f"   {skill.description}")
+                print(f"   Custo: {skill.cost_mana} mana | CD: {skill.cooldown} turnos")
+                
+                if skill.requirements:
+                    req_names = [self.skill_tree.get_skill(r).name for r in skill.requirements]
+                    print(f"   Requer: {', '.join(req_names)}")
+                print()
+
         
         print(f"{'='*40}")
