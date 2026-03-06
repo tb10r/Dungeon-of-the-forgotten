@@ -16,7 +16,7 @@ class CombatPA:
         self.combat_active = True
         
         # Sistema de PA
-        self.player_max_pa = 6  # Pontos de ação máximo do jogador
+        self.player_max_pa = getattr(player, 'max_pa', 6)  # PA máximo persistente do jogador
         self.enemy_max_pa = 4   # Pontos de ação do inimigo
         
         self.player_pa = self.player_max_pa
@@ -208,9 +208,6 @@ class CombatPA:
         print("Defesa aumentada em 50% até o próximo turno!")
         print("⏭️ Seu turno termina automaticamente!")
         
-        # Zera PA para forçar fim do turno
-        self.player_pa = 0
-        
         return True
     
     def player_use_skill(self, skill_id):
@@ -243,12 +240,11 @@ class CombatPA:
             print(f"❌ PA insuficiente! Necessário: {self.PA_COSTS[pa_action]}, disponível: {self.player_pa}")
             return False
         
-        # Tenta usar a skill
-        success, result = self.player.use_skill(skill_id, self.enemy)
-        
-        if not success:
-            print(f"❌ {result}")
+        # Sem mana: apenas verifica cooldown e ativa skill
+        if skill.current_cooldown > 0:
+            print(f"❌ {skill.name} ainda está em cooldown! ({skill.current_cooldown} turnos)")
             return False
+        skill.current_cooldown = skill.cooldown
         
         # Consome PA
         cost = self.consume_pa(pa_action)
@@ -268,6 +264,16 @@ class CombatPA:
             # Calcula bônus passivos
             bonuses = caster.get_passive_bonuses()
             base_damage = int(skill.power * bonuses['damage_multiplier'])
+
+            # Mago aplica poder mágico em habilidades
+            if getattr(caster, 'player_class', None) == 'mago':
+                base_damage = int(base_damage * getattr(caster, 'magic_power', 1.0))
+
+            # Buff elemental por caminho da habilidade
+            if getattr(skill, 'path', None) == 'fogo':
+                base_damage = int(base_damage * bonuses.get('fire_damage_multiplier', 1.0))
+            elif getattr(skill, 'path', None) == 'arcano':
+                base_damage = int(base_damage * bonuses.get('arcane_damage_multiplier', 1.0))
             
             # Defesa do alvo
             defense_modifier = 1.5 if (target == self.enemy and self.enemy_defending) else 1.0
@@ -453,7 +459,6 @@ class CombatPA:
         # Jogador
         print(f"👤 {self.player.name}")
         print(f"   ❤️  HP: {self.player.hp}/{self.player.max_hp}")
-        print(f"   💧 Mana: {self.player.mana}/{self.player.max_mana}")
         print(f"   ⚡ PA: {self.player_pa}/{self.player_max_pa}")
         
         if self.player_defending:
@@ -484,20 +489,20 @@ class CombatPA:
         print(f"1 - ⚔️  Atacar (2 PA)")
         print(f"2 - 🛡️  Defender (1 PA)")
         print(f"3 - ⚡ Usar Habilidade (2-5 PA)")
-        print(f"4 - 🔮 Lançar Magia [Antigo] (2 PA)")
-        print(f"5 - 🎒 Usar Item (1 PA)")
-        print(f"6 - 🏃 Fugir (2 PA)")
+        print(f"4 - 🎒 Usar Item (1 PA)")
+        print(f"5 - 🏃 Fugir (2 PA)")
         print(f"0 - ⏭️  Pular Turno")
     
     def player_turn(self):
-        """Turno do jogador com múltiplas ações"""
+        """Turno do jogador: apenas 1 ação por turno"""
         self.turn_count += 1
         self.start_player_turn()
         
         print(f"\n🔵 Seu Turno!")
         print(f"⚡ PA Disponível: {self.player_pa}/{self.player_max_pa}")
+        print("💡 Regra: qualquer ação válida encerra seu turno.")
         
-        # Loop de ações até acabar PA
+        # Loop de menu até escolher e executar uma ação válida
         while self.player_pa > 0 and self.player.is_alive() and self.enemy.is_alive() and self.combat_active:
             self.show_combat_status()
             self.show_action_menu()
@@ -506,7 +511,9 @@ class CombatPA:
                 choice = input("\nEscolha uma ação: ").strip()
                 
                 if choice == "1":
-                    self.player_attack()
+                    if self.player_attack():
+                        print("⏭️ Turno encerrado após ataque.")
+                        break
                 
                 elif choice == "2":
                     if self.player_defend():
@@ -537,7 +544,7 @@ class CombatPA:
                                 pa_cost = self.PA_COSTS['skill_tier1']
                             
                             cooldown_text = f" (CD: {skill.current_cooldown})" if skill.current_cooldown > 0 else ""
-                            print(f"{idx} - {skill.name} ({pa_cost} PA, {skill.cost_mana} mana){cooldown_text}")
+                            print(f"{idx} - {skill.name} ({pa_cost} PA){cooldown_text}")
                             print(f"    {skill.description}")
                             skill_list.append(skill_id)
                             idx += 1
@@ -551,32 +558,16 @@ class CombatPA:
                             print("❌ Habilidade inválida!")
                             continue
                         
-                        self.player_use_skill(skill_list[skill_choice - 1])
+                        if self.player_use_skill(skill_list[skill_choice - 1]):
+                            print("⏭️ Turno encerrado após habilidade.")
+                            break
                     
                     except (ValueError, IndexError):
                         print("❌ Entrada inválida!")
                         continue
                 
                 elif choice == "4":
-                    # Magias antigas
-                    if not self.player.known_spells:
-                        print("❌ Você não conhece nenhuma magia!")
-                        continue
-                    
-                    self.player.show_spells()
-                    
-                    try:
-                        spell_idx = int(input("\nQual magia? (0 para cancelar): ")) - 1
-                        if spell_idx == -1:
-                            continue
-                        
-                        self.player_use_spell(spell_idx)
-                    
-                    except (ValueError, IndexError):
-                        print("❌ Entrada inválida!")
-                        continue
-                
-                elif choice == "5":
+                    # Usar item
                     # Usar item
                     if not self.player.inventory:
                         print("❌ Inventário vazio!")
@@ -589,13 +580,15 @@ class CombatPA:
                         if item_idx == -1:
                             continue
                         
-                        self.player_use_item(item_idx)
+                        if self.player_use_item(item_idx):
+                            print("⏭️ Turno encerrado após item.")
+                            break
                     
                     except (ValueError, IndexError):
                         print("❌ Entrada inválida!")
                         continue
                 
-                elif choice == "6":
+                elif choice == "5":
                     # Fugir
                     if self.attempt_flee():
                         break
@@ -603,7 +596,6 @@ class CombatPA:
                 elif choice == "0":
                     # Pular turno
                     print("\n⏭️ Pulando turno...")
-                    self.player_pa = 0
                     break
                 
                 else:
@@ -622,10 +614,6 @@ class CombatPA:
         print(f"\n{'='*50}")
         print("🔄 Fim do seu turno!")
         print(f"{'='*50}")
-        
-        mana_regen = 10
-        self.player.restore_mana(mana_regen)
-        print(f"✨ +{mana_regen} mana regenerada ({self.player.mana}/{self.player.max_mana})")
         
         # HP regen de passivas
         bonuses = self.player.get_passive_bonuses()
@@ -665,8 +653,8 @@ class CombatPA:
         print(f"{'='*60}")
         print(f"\n{self.enemy.description}")
         print(f"\n👹 {self.enemy.name} aparece!")
-        print(f"\n💡 Sistema de PA: Você tem {self.player_max_pa} pontos de ação por turno!")
-        print(f"💡 Use múltiplas ações até acabar seus PA!")
+        print(f"\n💡 Sistema de PA com ritmo tático: 1 ação válida por turno.")
+        print(f"💡 Você ainda gerencia PA, mas toda ação encerra seu turno.")
         
         while not self.is_combat_over():
             # Turno do jogador

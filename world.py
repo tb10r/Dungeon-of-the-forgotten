@@ -83,7 +83,7 @@ class World:
                 "name": "corredor ate a cozinha",
                 "type": "enemy",
                 "description": "Corredor mal iluminado com rastros de gordura nas paredes.\nFumaça fina e cinzenta emerge de uma passagem mais adiante.",
-                "connections": {"norte": "8", "sul": "11"},
+                "connections": {"norte": "8", "oeste": "7", "sul": "11"},
                 "enemy": "spaghettus",
                 "items": []
             },
@@ -268,8 +268,8 @@ class World:
         }
     def randomize_treasure_loot(self):
         """Distribui itens aleatoriamente nos baús de tesouro sem repetição"""
-        # Lista de todos os itens disponíveis para baús
-        available_items = [
+        # Lista base de itens para baús
+        loot_pool = [
             "health_potion",
             "simple_shield",
             "iron_shield",
@@ -291,10 +291,7 @@ class World:
                 
         # Meteoro tem 33% de chance de aparecer
         if random.random() < 0.33:
-            available_items.append("meteor")
-        
-        # Embaralha a lista para ordem aleatória
-        random.shuffle(available_items)
+            loot_pool.append("meteor")
         
         # Identifica salas de tipo "treasure" (baús)
         treasure_rooms = [room_id for room_id, room in self.rooms.items() 
@@ -312,16 +309,17 @@ class World:
         else:
             key_room = rune_room = necro_rune_room = None
         
-        # Distribui itens únicos para cada baú
-        item_index = 0
+        # Distribui itens para cada baú (com reposição para não esvaziar os últimos baús)
         for room_id in treasure_rooms:
             # Cada baú terá apenas 2-3 itens
             room_items = []
             items_per_chest = random.randint(2, 3)  # Entre 2 e 3 itens
-            for _ in range(items_per_chest):
-                if item_index < len(available_items):
-                    room_items.append(available_items[item_index])
-                    item_index += 1
+            if len(loot_pool) >= items_per_chest:
+                # Evita repetição dentro do mesmo baú quando possível
+                room_items.extend(random.sample(loot_pool, items_per_chest))
+            else:
+                # Fallback extremo: com reposição
+                room_items.extend(random.choice(loot_pool) for _ in range(items_per_chest))
             
             # Adiciona a chave no baú escolhido
             if room_id == key_room:
@@ -503,18 +501,25 @@ class World:
         
         return None
     
-    def get_item_from_room(self, room_id):
-        """Retorna instância do item da sala"""
-        from items import rusty_sword, simple_shield, health_potion, exit_key, summoning_rune, necromancer_rune, iron_shield, leather_armor, iron_armor, necromancer_robe, Blackwarrior_sword, Blackwarrior_armor, butcher_spatula, fireball, lightning_bolt, ice_shard, magical_heal, meteor, necromancer_curser, battle_axe, flaming_sword, war_hammer, dragon_lance, crystal_orb, ice_wand, ancient_staff, shadow_grimoire, fire_staff, lightning_rod
-        
+    def get_item_from_room(self, room_id, player_class=None, source="any"):
+        """Retorna instâncias dos itens da sala.
+        source:
+          - "chest": aplica filtro por classe + neutros e remove spells
+          - "any": mantém comportamento antigo (sem filtro)
+        """
+        from items import (
+            rusty_sword, simple_shield, health_potion, exit_key, summoning_rune, necromancer_rune,
+            iron_shield, leather_armor, iron_armor, necromancer_robe, Blackwarrior_sword, Blackwarrior_armor,
+            butcher_spatula, fireball, lightning_bolt, ice_shard, magical_heal, meteor, necromancer_curser,
+            battle_axe, flaming_sword, war_hammer, dragon_lance, crystal_orb, ice_wand, ancient_staff,
+            shadow_grimoire, fire_staff, lightning_rod
+        )
+
         item_names = self.get_treasure(room_id)
-        
         if not item_names:
             return []
-        
+
         # Mapeia nome do item para instância
-        # NOTA: warrior_sword, warrior_armor, mage_staff e mage_robe NÃO estão aqui
-        # pois são equipamentos iniciais exclusivos (já equipados ao criar personagem)
         items_map = {
             "rusty_sword": rusty_sword,
             "simple_shield": simple_shield,
@@ -546,13 +551,49 @@ class World:
             "fire_staff": fire_staff,
             "lightning_rod": lightning_rod,
         }
-        
+
+        neutral_items = {
+            "health_potion", "exit_key", "summoning_rune", "necromancer_rune",
+            "simple_shield", "iron_shield", "rusty_sword"
+        }
+        warrior_items = {
+            "battle_axe", "flaming_sword", "war_hammer", "dragon_lance",
+            "leather_armor", "iron_armor", "Blackwarrior_sword",
+            "Blackwarrior_armor", "butcher_spatula"
+        }
+        mage_items = {
+            "crystal_orb", "ice_wand", "ancient_staff", "shadow_grimoire",
+            "fire_staff", "lightning_rod", "necromancer_robe"
+        }
+
+        allowed_names = set(items_map.keys())
+        if source == "chest":
+            allowed_names = set(neutral_items)
+            if player_class == "guerreiro":
+                allowed_names |= warrior_items
+            elif player_class == "mago":
+                allowed_names |= mage_items
+
         items = []
         for item_name in item_names:
             item = items_map.get(item_name)
-            if item:
-                items.append(item)
-        
+            if not item:
+                continue
+
+            if source == "chest":
+                if item_name not in allowed_names:
+                    continue
+                if item.item_type == "spell":
+                    continue
+
+            items.append(item)
+
+        # Garantia: baú nunca vazio após filtro de classe
+        if source == "chest" and not items:
+            fallback_item = items_map.get("health_potion")
+            if fallback_item:
+                items.append(fallback_item)
+
         return items
 
     def process_room_events(self, player):
@@ -876,7 +917,7 @@ class World:
         
         # Verifica se há tesouro (sem inimigo)
         elif self.has_treasure(room_id):
-            items = self.get_item_from_room(room_id)  # ← MUDOU: pega lista
+            items = self.get_item_from_room(room_id, player.player_class, source="chest")
             if items:
                 print(f"\n💎 Você encontrou {len(items)} item(ns)!")
                 

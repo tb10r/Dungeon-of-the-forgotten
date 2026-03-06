@@ -5,6 +5,276 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jogando - Dungeon of the Forgotten</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .overlay-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.75);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .overlay-modal.show {
+            display: flex;
+        }
+
+        .overlay-content {
+            width: min(980px, 100%);
+            max-height: 85vh;
+            overflow: auto;
+            background: #141726;
+            border: 2px solid #d6b15a;
+            border-radius: 14px;
+            padding: 18px;
+        }
+
+        .overlay-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .overlay-title {
+            color: #f0d58a;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .overlay-close {
+            border: none;
+            background: #8b2c2c;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .inv-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 12px;
+        }
+
+        .inv-item {
+            border: 1px solid #3a3f57;
+            border-radius: 10px;
+            padding: 10px;
+            background: #1a1f33;
+        }
+
+        .inv-item h4 {
+            margin: 0 0 6px;
+            color: #f0d58a;
+            font-size: 0.95rem;
+        }
+
+        .inv-item p {
+            margin: 0 0 8px;
+            color: #c8cde0;
+            font-size: 0.85rem;
+            line-height: 1.25;
+        }
+
+        .inv-meta {
+            font-size: 0.8rem;
+            color: #a8b0c9;
+            margin-bottom: 8px;
+        }
+
+        .inv-action {
+            border: none;
+            background: #2f7a4e;
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 10px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .map-wrap {
+            overflow: auto;
+            border: 1px solid #3a3f57;
+            border-radius: 10px;
+            background: #101427;
+            padding: 12px;
+        }
+
+        .map-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 12px;
+            color: #b9c0d9;
+            font-size: 0.86rem;
+        }
+
+        .map-legend span {
+            background: #1a1f33;
+            border: 1px solid #334062;
+            border-radius: 8px;
+            padding: 4px 8px;
+        }
+
+        .map-canvas {
+            position: relative;
+            width: 760px;
+            height: 740px;
+            margin: 0 auto;
+        }
+
+        .map-link-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .map-room {
+            position: absolute;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            cursor: default;
+            border: 2px solid #3f465f;
+            background: #202741;
+        }
+
+        .map-room-id {
+            position: absolute;
+            right: -8px;
+            top: -8px;
+            min-width: 16px;
+            text-align: center;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: #101427;
+            background: #f0d58a;
+            border-radius: 999px;
+            padding: 1px 4px;
+            border: 1px solid #6d5a2b;
+        }
+
+        .map-room.current {
+            border-color: #58d68d;
+            box-shadow: 0 0 10px rgba(88, 214, 141, 0.8);
+        }
+
+        .map-room.hidden {
+            opacity: 0.35;
+            background: #151a2a;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+
+        .status-card {
+            border: 1px solid #3a3f57;
+            border-radius: 10px;
+            padding: 12px;
+            background: #1a1f33;
+        }
+
+        .status-card h4 {
+            margin-bottom: 8px;
+            color: #f0d58a;
+            font-size: 0.96rem;
+        }
+
+        .status-list {
+            display: grid;
+            gap: 6px;
+            font-size: 0.9rem;
+            color: #c8cde0;
+        }
+
+        .status-line strong {
+            color: #eef1ff;
+        }
+
+        .status-progress {
+            margin-top: 8px;
+            height: 10px;
+            background: #0f1322;
+            border-radius: 999px;
+            overflow: hidden;
+            border: 1px solid #32415d;
+        }
+
+        .status-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #2e9d65, #67d997);
+        }
+
+        .attr-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .attr-btn {
+            border: 1px solid #3a4a73;
+            background: #243457;
+            color: #f1f5ff;
+            border-radius: 8px;
+            padding: 7px 8px;
+            cursor: pointer;
+            font-size: 0.84rem;
+        }
+
+        .attr-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
+        @media (max-width: 768px) {
+            .overlay-modal {
+                padding: 10px;
+                align-items: flex-end;
+            }
+
+            .overlay-content {
+                width: 100%;
+                max-height: 92vh;
+                border-radius: 12px 12px 0 0;
+                padding: 14px;
+            }
+
+            .overlay-header {
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .overlay-title {
+                font-size: 1rem;
+            }
+
+            .map-canvas {
+                min-width: 720px;
+                margin: 0;
+            }
+
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .attr-actions {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 </head>
 <body class="game-screen">
     <div class="game-container">
@@ -29,7 +299,7 @@
                 </div>
                 
                 <div class="stat-bar">
-                    <span class="stat-label">💧 Mana</span>
+                    <span class="stat-label">⚡ PA Máx</span>
                     <div class="bar-container">
                         <div id="manaBar" class="bar mana-bar"></div>
                         <span id="manaText" class="bar-text">0/0</span>
@@ -126,6 +396,49 @@
             </div>
         </div>
     </div>
+
+    <div id="inventoryModal" class="overlay-modal">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <div class="overlay-title">🎒 Inventário</div>
+                <button class="overlay-close" onclick="closeModal('inventoryModal')">Fechar</button>
+            </div>
+            <div id="inventoryStats" class="inv-meta"></div>
+            <div id="inventoryGrid" class="inv-grid"></div>
+        </div>
+    </div>
+
+    <div id="mapModal" class="overlay-modal">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <div class="overlay-title">🗺️ Mapa da Dungeon</div>
+                <button class="overlay-close" onclick="closeModal('mapModal')">Fechar</button>
+            </div>
+            <div class="map-legend">
+                <span>👤 Atual</span>
+                <span>⚔️ Inimigo</span>
+                <span>💎 Tesouro</span>
+                <span>👑 Boss</span>
+                <span>🚪 Saída</span>
+                <span>✓ Limpa</span>
+            </div>
+            <div class="map-wrap">
+                <div id="mapCanvas" class="map-canvas">
+                    <svg id="mapLinks" class="map-link-layer"></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="statusModal" class="overlay-modal">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <div class="overlay-title">📊 Status do Personagem</div>
+                <button class="overlay-close" onclick="closeModal('statusModal')">Fechar</button>
+            </div>
+            <div id="statusContent" class="status-grid"></div>
+        </div>
+    </div>
     
     <script>
         // Estado do jogo
@@ -175,7 +488,7 @@
             
             // Atualizar barras
             updateBar('hpBar', 'hpText', player.hp, player.max_hp, 'HP');
-            updateBar('manaBar', 'manaText', player.mana, player.max_mana, 'Mana');
+            updateBar('manaBar', 'manaText', player.max_pa, player.max_pa, 'PA');
             document.getElementById('xpText').textContent = player.xp;
             
             // Atualizar equipamentos
@@ -206,6 +519,7 @@
             }
             if (room.has_treasure) {
                 statusHTML += '<div class="status-info">💎 Há um baú aqui!</div>';
+                statusHTML += '<button class="btn btn-action" style="background: linear-gradient(135deg, #8b6b1f, #d4af37); width: 100%; margin-top: 10px;" onclick="collectTreasure()">🧰 Coletar Baú</button>';
             }
             document.getElementById('roomStatus').innerHTML = statusHTML;
             
@@ -304,17 +618,347 @@
                 addLog('❌ Erro ao iniciar combate!');
             }
         }
-        
-        function openInventory() {
-            alert('Sistema de inventário em desenvolvimento!');
+
+        async function collectTreasure() {
+            try {
+                const response = await fetch('/api/collect_treasure', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!data.success) {
+                    addLog('❌ ' + data.message, 'error');
+                    return;
+                }
+
+                addLog('💎 ' + data.message);
+                (data.items || []).forEach(item => {
+                    addLog(`📦 ${item.name} (${item.type})`);
+                });
+
+                await loadGameState();
+            } catch (error) {
+                console.error('Erro ao coletar baú:', error);
+                addLog('❌ Erro ao coletar baú!', 'error');
+            }
         }
         
-        function openStatus() {
-            alert('Sistema de status em desenvolvimento!');
+        function closeModal(modalId) {
+            const el = document.getElementById(modalId);
+            if (el) el.classList.remove('show');
+        }
+
+        function getItemMeta(item) {
+            if (item.type === 'weapon') return `⚔️ +${item.attack_bonus || 0} ataque`;
+            if (item.type === 'shield') return `🛡️ +${item.defense_bonus || 0} defesa`;
+            if (item.type === 'armor') return `🛡️ +${item.defense_bonus || 0} defesa`;
+            if (item.type === 'consumable') return `🧪 Cura ${item.heal_amount || 0} HP`;
+            return `ℹ️ Tipo: ${item.type}`;
+        }
+
+        function getActionLabel(item) {
+            if (item.action === 'usar') return 'Usar';
+            if (item.action === 'equipar') return 'Equipar';
+            return 'Sem ação';
+        }
+
+        async function doInventoryAction(itemIndex) {
+            try {
+                const response = await fetch('/api/inventory/action', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ item_index: itemIndex })
+                });
+                const data = await response.json();
+                addLog(data.success ? `✅ ${data.message}` : `❌ ${data.message}`, data.success ? 'info' : 'error');
+                if (data.success) {
+                    await loadGameState();
+                    await openInventory();
+                }
+            } catch (error) {
+                console.error('Erro em ação de inventário:', error);
+                addLog('❌ Erro ao usar/equipar item', 'error');
+            }
+        }
+
+        async function openInventory() {
+            try {
+                const response = await fetch('/api/inventory');
+                const data = await response.json();
+                if (data.error) {
+                    addLog(`❌ ${data.error}`, 'error');
+                    return;
+                }
+
+                const stats = data.stats;
+                const equipped = data.equipped;
+                const statsText = `HP ${stats.hp}/${stats.max_hp} | PA Máx ${stats.max_pa} | Pontos de Skill ${stats.skill_points} | Ataque ${stats.attack} | Defesa ${stats.defense} | Equipado: Arma ${equipped.weapon || 'Nenhuma'}, Escudo ${equipped.shield || 'Nenhum'}, Armadura ${equipped.armor || 'Nenhuma'}`;
+                document.getElementById('inventoryStats').textContent = statsText;
+
+                const grid = document.getElementById('inventoryGrid');
+                grid.innerHTML = '';
+
+                if (!data.items || data.items.length === 0) {
+                    grid.innerHTML = '<div class="inv-item"><p>Inventário vazio.</p></div>';
+                } else {
+                    data.items.forEach(item => {
+                        const card = document.createElement('div');
+                        card.className = 'inv-item';
+                        card.innerHTML = `
+                            <h4>${item.name}</h4>
+                            <p>${item.description || 'Sem descrição'}</p>
+                            <div class="inv-meta">${getItemMeta(item)}</div>
+                            <button class="inv-action" ${item.action === 'info' ? 'disabled' : ''}>${getActionLabel(item)}</button>
+                        `;
+
+                        const btn = card.querySelector('button');
+                        if (item.action !== 'info') {
+                            btn.addEventListener('click', () => doInventoryAction(item.index));
+                        }
+
+                        grid.appendChild(card);
+                    });
+                }
+
+                document.getElementById('inventoryModal').classList.add('show');
+            } catch (error) {
+                console.error('Erro ao abrir inventário:', error);
+                addLog('❌ Erro ao carregar inventário', 'error');
+            }
         }
         
-        function openMap() {
-            alert('Sistema de mapa em desenvolvimento!');
+        function buildStatusLine(label, value) {
+            return `<div class="status-line"><strong>${label}:</strong> ${value}</div>`;
+        }
+
+        async function spendAttribute(attribute) {
+            try {
+                const response = await fetch('/api/status/spend_attribute', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ attribute })
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    addLog(`❌ ${data.message || data.error || 'Falha ao distribuir ponto.'}`, 'error');
+                    return;
+                }
+
+                addLog(`✅ ${data.message}`);
+                await loadGameState();
+                await openStatus();
+            } catch (error) {
+                console.error('Erro ao gastar ponto de atributo:', error);
+                addLog('❌ Erro ao distribuir ponto de atributo', 'error');
+            }
+        }
+
+        async function openStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                if (data.error) {
+                    addLog(`❌ ${data.error}`, 'error');
+                    return;
+                }
+
+                const player = data.player;
+                const world = data.world;
+                const canSpendAttr = (player.attribute_points || 0) > 0;
+
+                const content = document.getElementById('statusContent');
+                content.innerHTML = `
+                    <div class="status-card">
+                        <h4>👤 Identidade</h4>
+                        <div class="status-list">
+                            ${buildStatusLine('Nome', player.name)}
+                            ${buildStatusLine('Classe', player.class)}
+                            ${buildStatusLine('Nível', player.level)}
+                            ${buildStatusLine('Sala Atual', player.position)}
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <h4>❤️ Recursos</h4>
+                        <div class="status-list">
+                            ${buildStatusLine('HP', `${player.hp}/${player.max_hp}`)}
+                            ${buildStatusLine('Mana', `${player.mana}/${player.max_mana}`)}
+                            ${buildStatusLine('PA Máx', player.max_pa)}
+                            ${buildStatusLine('XP', `${player.xp}/${player.xp_needed}`)}
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <h4>⚔️ Atributos</h4>
+                        <div class="status-list">
+                            ${buildStatusLine('Força', player.strength)}
+                            ${buildStatusLine('Vitalidade', player.vitality)}
+                            ${buildStatusLine('Agilidade', player.agility)}
+                            ${buildStatusLine('Pontos de Atributo', player.attribute_points || 0)}
+                            ${buildStatusLine('Crítico', `${player.crit_chance}%`)}
+                            ${buildStatusLine('Ataque Total', player.attack)}
+                            ${buildStatusLine('Defesa Total', player.defense)}
+                        </div>
+                        <div class="attr-actions">
+                            <button class="attr-btn" ${canSpendAttr ? '' : 'disabled'} onclick="spendAttribute('strength')">+1 Força</button>
+                            <button class="attr-btn" ${canSpendAttr ? '' : 'disabled'} onclick="spendAttribute('vitality')">+1 Vitalidade</button>
+                            <button class="attr-btn" ${canSpendAttr ? '' : 'disabled'} onclick="spendAttribute('agility')">+1 Agilidade</button>
+                            <button class="attr-btn" ${canSpendAttr ? '' : 'disabled'} onclick="spendAttribute('mana')">+10 Mana</button>
+                        </div>
+                    </div>
+
+                    <div class="status-card">
+                        <h4>🧭 Progresso da Dungeon</h4>
+                        <div class="status-list">
+                            ${buildStatusLine('Salas Visitadas', `${world.visited_rooms}/${world.total_rooms}`)}
+                            ${buildStatusLine('Inimigos Derrotados', world.defeated_enemies)}
+                            ${buildStatusLine('Baús Coletados', world.looted_rooms)}
+                            ${buildStatusLine('Pontos de Skill', player.skill_points)}
+                            ${buildStatusLine('Skills Desbloqueadas', player.unlocked_skills_count)}
+                        </div>
+                        <div class="status-progress">
+                            <div class="status-progress-fill" style="width:${world.visited_percent}%"></div>
+                        </div>
+                        <div class="status-line" style="margin-top:6px;"><strong>Exploração:</strong> ${world.visited_percent}%</div>
+                    </div>
+
+                    <div class="status-card">
+                        <h4>🛡️ Equipamento</h4>
+                        <div class="status-list">
+                            ${buildStatusLine('Arma', player.equipped.weapon || 'Nenhuma')}
+                            ${buildStatusLine('Escudo', player.equipped.shield || 'Nenhum')}
+                            ${buildStatusLine('Armadura', player.equipped.armor || 'Nenhuma')}
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('statusModal').classList.add('show');
+            } catch (error) {
+                console.error('Erro ao abrir status:', error);
+                addLog('❌ Erro ao carregar status', 'error');
+            }
+        }
+        
+        function iconForRoom(room) {
+            if (!room.visited && !room.current) return '·';
+            if (room.current) return '👤';
+            if (room.type === 'exit') return '🚪';
+            if (room.type === 'boss') return room.defeated ? '💀' : '👑';
+            if (room.has_enemy) return '⚔️';
+            if (room.has_treasure && !room.looted) return '💎';
+            if (room.looted) return '✓';
+            return '□';
+        }
+
+        function drawMapConnections(svg, rooms, scale, offsetX, offsetY) {
+            svg.innerHTML = '';
+            const mapById = new Map(rooms.map(r => [r.id, r]));
+            const drawn = new Set();
+
+            function isDiscovered(room) {
+                return room && (room.visited || room.current);
+            }
+
+            rooms.forEach(room => {
+                room.connections.forEach(targetId => {
+                    const target = mapById.get(targetId);
+                    if (!target) return;
+
+                    const fromDiscovered = isDiscovered(room);
+                    const toDiscovered = isDiscovered(target);
+
+                    // Exibe conexões apenas quando há ao menos uma ponta descoberta
+                    if (!fromDiscovered && !toDiscovered) return;
+
+                    const key = [room.id, targetId].sort().join('-');
+                    if (drawn.has(key)) return;
+                    drawn.add(key);
+
+                    const x1 = room.col * scale + offsetX + 17;
+                    const y1 = room.row * scale + offsetY + 17;
+                    const x2 = target.col * scale + offsetX + 17;
+                    const y2 = target.row * scale + offsetY + 17;
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x1);
+                    line.setAttribute('y1', y1);
+                    line.setAttribute('x2', x2);
+                    line.setAttribute('y2', y2);
+                    line.setAttribute('stroke', fromDiscovered && toDiscovered ? '#8aa5ff' : '#4b5474');
+                    line.setAttribute('stroke-width', fromDiscovered && toDiscovered ? '2.6' : '1.6');
+                    if (!(fromDiscovered && toDiscovered)) {
+                        line.setAttribute('stroke-dasharray', '5 4');
+                    }
+                    svg.appendChild(line);
+                });
+            });
+        }
+
+        async function openMap() {
+            try {
+                const response = await fetch('/api/map');
+                const data = await response.json();
+                if (data.error) {
+                    addLog(`❌ ${data.error}`, 'error');
+                    return;
+                }
+
+                const canvas = document.getElementById('mapCanvas');
+                const svg = document.getElementById('mapLinks');
+                canvas.querySelectorAll('.map-room').forEach(el => el.remove());
+
+                const scale = 26;
+                const offsetX = 60;
+                const offsetY = 40;
+
+                const maxRow = Math.max(...data.rooms.map(r => r.row), 0);
+                const maxCol = Math.max(...data.rooms.map(r => r.col), 0);
+                const canvasWidth = Math.max(760, (maxCol * scale) + (offsetX * 2) + 44);
+                const canvasHeight = Math.max(740, (maxRow * scale) + (offsetY * 2) + 44);
+
+                canvas.style.width = `${canvasWidth}px`;
+                canvas.style.height = `${canvasHeight}px`;
+                svg.setAttribute('viewBox', `0 0 ${canvasWidth} ${canvasHeight}`);
+
+                drawMapConnections(svg, data.rooms, scale, offsetX, offsetY);
+
+                data.rooms.forEach(room => {
+                    const node = document.createElement('div');
+                    node.className = 'map-room';
+                    if (room.current) node.classList.add('current');
+                    if (!room.visited && !room.current) node.classList.add('hidden');
+
+                    node.style.left = `${room.col * scale + offsetX}px`;
+                    node.style.top = `${room.row * scale + offsetY}px`;
+                    const connectionsText = (room.connections || []).join(', ') || 'Nenhuma';
+                    const enemyText = room.has_enemy ? 'Sim' : 'Não';
+                    const treasureText = room.has_treasure ? 'Sim' : 'Não';
+                    node.title = `${room.name} (${room.id})\nTipo: ${room.type}\nInimigo: ${enemyText}\nTesouro: ${treasureText}\nConexões: ${connectionsText}`;
+                    node.textContent = iconForRoom(room);
+
+                    const roomIdBadge = document.createElement('span');
+                    roomIdBadge.className = 'map-room-id';
+                    roomIdBadge.textContent = room.id;
+                    node.appendChild(roomIdBadge);
+
+                    canvas.appendChild(node);
+                });
+
+                document.getElementById('mapModal').classList.add('show');
+            } catch (error) {
+                console.error('Erro ao abrir mapa:', error);
+                addLog('❌ Erro ao carregar mapa', 'error');
+            }
         }
         
         // Inicializar ao carregar a página

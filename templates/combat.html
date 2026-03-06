@@ -397,14 +397,6 @@
                     </div>
                 </div>
 
-                <div class="mana-bar-container">
-                    <div class="stat-label">💧 Mana</div>
-                    <div class="bar">
-                        <div class="bar-fill mana-fill" id="playerManaBar" style="width: 100%"></div>
-                        <div class="bar-text" id="playerManaText">50/50</div>
-                    </div>
-                </div>
-
                 <div id="playerDefending" class="defending-badge" style="display: none;">
                     🛡️ DEFENDENDO
                 </div>
@@ -451,7 +443,7 @@
                 🏃 Fugir (2 PA)
             </button>
             <button class="action-btn end-turn" onclick="endTurn()">
-                ⏭️ Terminar Turno
+                ⏭️ Pular Turno
             </button>
         </div>
 
@@ -523,7 +515,6 @@
             const player = combatState.player;
             document.getElementById('playerName').textContent = player.name;
             updateBar('playerHPBar', 'playerHPText', player.hp, player.max_hp);
-            updateBar('playerManaBar', 'playerManaText', player.mana, player.max_mana);
             
             document.getElementById('playerDefending').style.display = 
                 player.defending ? 'inline-block' : 'none';
@@ -647,7 +638,7 @@
                     div.className = 'skill-item' + (skill.can_use ? '' : ' disabled');
                     div.innerHTML = `
                         <div class="skill-name">${skill.name}</div>
-                        <div class="skill-costs">⚡ ${skill.pa_cost} PA | 💧 ${skill.mana_cost} Mana${skill.cooldown > 0 ? ` | ⏱️ CD: ${skill.cooldown}` : ''}</div>
+                        <div class="skill-costs">⚡ ${skill.pa_cost} PA${skill.cooldown > 0 ? ` | ⏱️ CD: ${skill.cooldown}` : ''}</div>
                         <div style="color: #aaa; font-size: 0.9em;">${skill.description}</div>
                     `;
                     

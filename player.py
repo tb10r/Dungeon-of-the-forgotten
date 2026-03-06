@@ -32,6 +32,8 @@ class Player:
             self.max_mana = 80  # Mago começa com mais mana
         else:
             self.max_mana = 50  # Guerreiro tem mana padrão
+
+        self.bonus_mana = 0  # Bônus permanente de mana por atributos
         
         self.mana = self.max_mana
         
@@ -39,7 +41,9 @@ class Player:
         from skill_tree import SkillTree
         self.skill_tree = SkillTree(player_class)
         self.skill_points = 0  # Pontos disponíveis para gastar
+        self.attribute_points = 0  # Pontos de atributo para distribuir
         self.unlocked_skills = []  # IDs das skills desbloqueadas
+        self.max_pa = 6  # PA máximo usado pelo novo sistema de combate
         
         # Sistema antigo de magias (manter por compatibilidade por enquanto)
         self.known_spells = []  # DEPRECATED - migrar para skill_tree
@@ -104,7 +108,7 @@ class Player:
         if self.equipped_armor and hasattr(self.equipped_armor, 'mana_bonus'):
             armor_bonus = self.equipped_armor.mana_bonus
         
-        return base_mana + armor_bonus
+            return base_mana + armor_bonus + self.bonus_mana
     
     def roll_critical_hit(self):
         """Verifica se o ataque é crítico"""
@@ -117,25 +121,99 @@ class Player:
         """Calcula XP necessário para próximo nível"""
         return self.level * 100
     
-    def gain_xp(self, amount):
-        """Ganha XP e verifica se subiu de nível"""
+    def gain_xp(self, amount, auto_distribute=False):
+        """Ganha XP e verifica se subiu de nível.
+
+        auto_distribute=True evita prompts interativos (uso web/API).
+        """
         self.xp += amount
         print(f"\n+{amount} XP")
         
         # Verifica se subiu de nível
         while self.xp >= self.get_xp_needed():
-            self.level_up()
+            if auto_distribute:
+                self.level_up_auto()
+            else:
+                self.level_up()
+
+    def level_up_auto(self):
+        """Sobe de nível sem interação (para web/API).
+
+        Em vez de distribuir automaticamente, acumula pontos para o jogador escolher.
+        """
+        self.xp -= self.get_xp_needed()
+        self.level += 1
+        self.max_pa += 1
+        self.skill_points += 1
+        self.attribute_points += 3
+
+        self.max_hp = self.calculate_max_hp()
+        self.base_attack = self.calculate_attack()
+        self.base_defense = self.calculate_defense()
+        self.max_mana = self.calculate_max_mana()
+
+        # Recupera recursos ao subir de nível
+        self.hp = self.max_hp
+        self.mana = self.max_mana
+        print(f"\n✨ Nível {self.level} (web). +1 PA Máx, +1 skill e +3 pontos de atributo.")
+
+    def spend_attribute_point(self, attribute):
+        """Gasta 1 ponto de atributo (uso web/API)."""
+        if self.attribute_points <= 0:
+            return False, "Sem pontos de atributo disponíveis."
+
+        attr = (attribute or "").strip().lower()
+
+        if attr == "strength":
+            self.strength += 1
+        elif attr == "vitality":
+            self.vitality += 1
+        elif attr == "agility":
+            self.agility += 1
+        elif attr == "mana":
+            self.bonus_mana += 10
+            self.max_mana = self.calculate_max_mana()
+            self.mana = min(self.max_mana, self.mana + 10)
+        else:
+            return False, "Atributo inválido."
+
+        self.attribute_points -= 1
+
+        # Recalcula derivados após distribuir ponto
+        old_max_hp = self.max_hp
+        self.max_hp = self.calculate_max_hp()
+        self.base_attack = self.calculate_attack()
+        self.base_defense = self.calculate_defense()
+        self.max_mana = self.calculate_max_mana()
+
+        if self.max_hp > old_max_hp:
+            self.hp = min(self.max_hp, self.hp + (self.max_hp - old_max_hp))
+        else:
+            self.hp = min(self.hp, self.max_hp)
+
+        self.mana = min(self.mana, self.max_mana)
+
+        label_map = {
+            "strength": "Força",
+            "vitality": "Vitalidade",
+            "agility": "Agilidade",
+            "mana": "Mana",
+        }
+
+        return True, f"+1 ponto em {label_map[attr]}!"
     
     def level_up(self):
         """Sobe de nível e permite distribuir pontos de atributo"""
         self.xp -= self.get_xp_needed()
         self.level += 1
+        self.max_pa += 1
         
         print(f"\n{'='*50}")
         print(f"✨ Você subiu para o nível {self.level}! ✨")
         print(f"{'='*50}")
         print("Você ganhou 3 pontos de atributo para distribuir!")
         print(f"🌟 +1 Ponto de Habilidade! (Total: {self.skill_points + 1})")
+        print(f"⚡ +1 PA Máximo! (Total: {self.max_pa})")
         
         # Ganha 1 ponto de habilidade por level
         self.skill_points += 1
@@ -239,7 +317,8 @@ class Player:
                         
                         elif choice == 4:
                             old_max_mana = self.max_mana
-                            self.max_mana += (amount * 10)
+                            self.bonus_mana += (amount * 10)
+                            self.max_mana = self.calculate_max_mana()
                             remaining -= amount
                             print(f"✅ Mana Máxima aumentada em +{amount * 10} (Total: {self.max_mana})!")
                             print(f"   Mana: {old_max_mana} → {self.max_mana}")
@@ -629,6 +708,8 @@ class Player:
         bonuses = {
             'crit_chance': 0,
             'damage_multiplier': 1.0,
+            'fire_damage_multiplier': 1.0,
+            'arcane_damage_multiplier': 1.0,
             'defense_multiplier': 1.0,
             'lifesteal': 0,
             'hp_regen': 0,
@@ -652,8 +733,9 @@ class Player:
                     bonuses['hp_regen'] = skill.power * self.max_hp
                 elif "Maestria Arcana" in skill.name:
                     bonuses['mana_cost_reduction'] = skill.power
+                    bonuses['arcane_damage_multiplier'] += skill.power
                 elif "Combustão Interna" in skill.name:
-                    bonuses['damage_multiplier'] += skill.power
+                    bonuses['fire_damage_multiplier'] += skill.power
         
         return bonuses
     
@@ -686,7 +768,7 @@ class Player:
                 
                 print(f"{status} {unlocked} {tier_text} {skill.name}")
                 print(f"   {skill.description}")
-                print(f"   Custo: {skill.cost_mana} mana | CD: {skill.cooldown} turnos")
+                print(f"   Custo: {skill.cost_pa} PA | CD: {skill.cooldown} turnos")
                 
                 if skill.requirements:
                     req_names = [self.skill_tree.get_skill(r).name for r in skill.requirements]

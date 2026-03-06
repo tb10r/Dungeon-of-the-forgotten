@@ -62,7 +62,8 @@
             flex-direction: column;
             align-items: center;
             padding: 50px 20px;
-            overflow-y: auto;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .path-container {
@@ -72,6 +73,7 @@
             max-width: 1800px;
             width: 100%;
             position: relative;
+            min-width: 980px;
         }
 
         .skill-path {
@@ -208,7 +210,7 @@
             padding: 20px;
             max-width: 350px;
             z-index: 1000;
-            pointer-events: none;
+            pointer-events: auto;
             display: none;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
         }
@@ -284,6 +286,108 @@
         .unlock-message.show {
             display: block;
         }
+
+        @media (max-width: 1024px) {
+            .skill-tree-header {
+                padding: 12px;
+                gap: 10px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .skill-tree-header h1 {
+                width: 100%;
+                text-align: center;
+                font-size: 1.25rem;
+            }
+
+            .skill-points-display {
+                font-size: 1rem;
+                padding: 10px 16px;
+            }
+
+            .back-button {
+                padding: 10px 14px;
+            }
+
+            .skill-tree-canvas {
+                height: calc(100vh - 140px);
+                padding: 18px 12px 28px;
+                align-items: flex-start;
+            }
+
+            .path-container {
+                display: flex;
+                gap: 18px;
+                min-width: max-content;
+                max-width: none;
+                width: auto;
+                padding-right: 10px;
+            }
+
+            .skill-path {
+                min-width: 220px;
+                gap: 40px;
+            }
+
+            .path-header {
+                font-size: 1.05rem;
+                margin-bottom: 8px;
+            }
+
+            .skill-node {
+                width: 92px;
+                height: 92px;
+                padding: 6px;
+            }
+
+            .skill-node.ultimate {
+                width: 112px;
+                height: 112px;
+            }
+
+            .skill-icon {
+                font-size: 1.5em;
+            }
+
+            .ultimate .skill-icon {
+                font-size: 1.9em;
+            }
+
+            .skill-name {
+                font-size: 0.68em;
+            }
+
+            .skill-tier {
+                font-size: 0.58em;
+            }
+
+            .connection-line {
+                height: 42px;
+                top: -42px;
+            }
+
+            .skill-tooltip {
+                left: 10px !important;
+                right: 10px;
+                bottom: 10px;
+                top: auto !important;
+                max-width: none;
+                padding: 14px;
+            }
+
+            .tooltip-title {
+                font-size: 1.05rem;
+            }
+
+            .tooltip-description {
+                font-size: 0.92rem;
+            }
+
+            .tooltip-stats {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
@@ -319,6 +423,7 @@
         let playerClass = '';
         let skillPoints = 0;
         let unlockedSkills = [];
+        const isTouchDevice = window.matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window);
 
         const pathNames = {
             'guerreiro': {
@@ -419,16 +524,33 @@
                 <div class="skill-name">${skill.name}</div>
             `;
             
-            // Eventos
-            node.addEventListener('mouseenter', (e) => showTooltip(skill, e));
-            node.addEventListener('mousemove', (e) => moveTooltip(e));
-            node.addEventListener('mouseleave', hideTooltip);
-            node.addEventListener('click', () => attemptUnlock(skill));
+            // Eventos de desktop
+            if (!isTouchDevice) {
+                node.addEventListener('mouseenter', (e) => showTooltip(skill, e));
+                node.addEventListener('mousemove', (e) => moveTooltip(e));
+                node.addEventListener('mouseleave', hideTooltip);
+                node.addEventListener('click', () => attemptUnlock(skill));
+            } else {
+                // Mobile: toque mostra detalhes e oferece desbloqueio
+                node.addEventListener('click', (e) => onTouchSkillTap(skill, e));
+            }
             
             return node;
         }
 
-        function showTooltip(skill, event) {
+        async function onTouchSkillTap(skill, event) {
+            showTooltip(skill, event, true);
+
+            if (skill.unlocked || !skill.can_unlock || skillPoints <= 0) {
+                return;
+            }
+
+            const ok = confirm(`Desbloquear ${skill.name}?`);
+            if (!ok) return;
+            await attemptUnlock(skill);
+        }
+
+        function showTooltip(skill, event, fromTouch = false) {
             const tooltip = document.getElementById('skillTooltip');
             const title = document.getElementById('tooltipTitle');
             const description = document.getElementById('tooltipDescription');
@@ -439,7 +561,7 @@
             description.textContent = skill.description;
             
             stats.innerHTML = `
-                <div class="tooltip-stat">💧 Custo: ${skill.cost_mana} mana</div>
+                <div class="tooltip-stat">⚡ Custo: ${skill.cost_pa} PA</div>
                 <div class="tooltip-stat">⏱️ CD: ${skill.cooldown} turnos</div>
                 <div class="tooltip-stat">⚡ Tipo: ${skill.is_passive ? 'Passiva' : 'Ativa'}</div>
                 <div class="tooltip-stat">🎯 Poder: ${skill.power}</div>
@@ -460,18 +582,36 @@
             }
             
             tooltip.classList.add('show');
-            moveTooltip(event);
+            if (!fromTouch) {
+                moveTooltip(event);
+            } else {
+                tooltip.style.left = '12px';
+                tooltip.style.top = 'auto';
+                tooltip.style.bottom = '12px';
+            }
         }
 
         function moveTooltip(event) {
+            if (!event) return;
             const tooltip = document.getElementById('skillTooltip');
-            tooltip.style.left = (event.clientX + 20) + 'px';
-            tooltip.style.top = (event.clientY + 20) + 'px';
+            const left = Math.min(event.clientX + 20, window.innerWidth - 370);
+            const top = Math.min(event.clientY + 20, window.innerHeight - 220);
+            tooltip.style.left = Math.max(8, left) + 'px';
+            tooltip.style.top = Math.max(8, top) + 'px';
+            tooltip.style.bottom = 'auto';
         }
 
         function hideTooltip() {
             document.getElementById('skillTooltip').classList.remove('show');
         }
+
+        document.addEventListener('click', (e) => {
+            if (!isTouchDevice) return;
+            const tooltip = document.getElementById('skillTooltip');
+            if (!tooltip.classList.contains('show')) return;
+            if (e.target.closest('.skill-node') || e.target.closest('#skillTooltip')) return;
+            hideTooltip();
+        });
 
         async function attemptUnlock(skill) {
             if (skill.unlocked) {

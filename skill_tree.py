@@ -4,21 +4,29 @@ Sistema de Árvore de Habilidades tipo Clair Obscur
 
 class Skill:
     """Representa uma habilidade individual"""
-    
-    def __init__(self, skill_id, name, description, skill_type, tier, path, 
-                 cost_mana=0, cooldown=0, power=0, requirements=None, is_passive=False):
+
+    def __init__(self, skill_id, name, description, skill_type, tier, path,
+                 cost_pa=0, cooldown=0, power=0, requirements=None, is_passive=False, **kwargs):
         self.skill_id = skill_id
         self.name = name
         self.description = description
         self.skill_type = skill_type  # "active" ou "passive"
         self.tier = tier  # 1, 2, 3, ultimate
         self.path = path  # "tanque", "dps", "berserker" | "fogo", "gelo", "arcano"
-        self.cost_mana = cost_mana
+        # Compatibilidade com dados legados: aceita cost_mana e mapeia para PA.
+        if "cost_mana" in kwargs:
+            cost_pa = kwargs.pop("cost_mana")
+        self.cost_pa = cost_pa
         self.cooldown = cooldown  # Em turnos
         self.power = power  # Dano/Cura/Buff valor
         self.requirements = requirements or []  # IDs das skills necessárias
         self.is_passive = is_passive
         self.current_cooldown = 0
+
+    @property
+    def cost_mana(self):
+        """Alias legado para evitar quebra de chamadas antigas."""
+        return self.cost_pa
     
     def can_unlock(self, unlocked_skills):
         """Verifica se pode desbloquear esta skill"""
@@ -30,9 +38,6 @@ class Skill:
         """Usa a habilidade"""
         if self.current_cooldown > 0:
             return False, f"{self.name} ainda está em cooldown! ({self.current_cooldown} turnos)"
-        
-        if self.cost_mana > 0 and not caster.use_mana(self.cost_mana):
-            return False, f"Mana insuficiente! Necessário: {self.cost_mana}"
         
         self.current_cooldown = self.cooldown
         return True, None
@@ -230,14 +235,14 @@ class SkillTree:
         
         self.skills["m_arcane_2"] = Skill(
             "m_arcane_2", "Maestria Arcana",
-            "Todas as magias custam 20% menos mana (passiva).",
+            "Sua energia flui melhor: técnicas arcanas ficam mais eficientes (passiva).",
             "passive", tier=2, path="arcano",
             requirements=["m_arcane_1"], is_passive=True, power=0.2
         )
         
         self.skills["m_arcane_3"] = Skill(
             "m_arcane_3", "Drenar Essência",
-            "Absorve 35 de HP do inimigo e restaura sua Mana igual ao dano.",
+            "Absorve 35 de HP do inimigo e fortalece seu ritmo de ação.",
             "active", tier=3, path="arcano",
             cost_mana=25, cooldown=5, power=35,
             requirements=["m_arcane_2"]
@@ -245,7 +250,7 @@ class SkillTree:
         
         self.skills["m_arcane_ultimate"] = Skill(
             "m_arcane_ultimate", "SINGULARIDADE ARCANA",
-            "Cria um vórtice mágico: 120 de dano + drena 40 mana do inimigo + você age 2x no próximo turno.",
+            "Cria um vórtice mágico: 120 de dano e acelera seu fluxo de ações.",
             "active", tier="ultimate", path="arcano",
             cost_mana=70, cooldown=14, power=120,
             requirements=["m_arcane_3"]

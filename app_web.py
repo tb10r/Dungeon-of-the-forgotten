@@ -67,6 +67,10 @@ def get_game_state():
     game_data = active_games[game_id]
     player = game_data['player']
     world = game_data['world']
+
+    # Garante progresso do mapa na interface web
+    world.visited_rooms.add(player.position)
+
     room = world.get_room(player.position)
     
     return jsonify({
@@ -78,9 +82,18 @@ def get_game_state():
             'max_hp': player.max_hp,
             'mana': player.mana,
             'max_mana': player.max_mana,
+            'max_pa': getattr(player, 'max_pa', 6),
             'xp': player.xp,
+            'xp_needed': player.get_xp_needed(),
+            'strength': player.strength,
+            'vitality': player.vitality,
+            'agility': player.agility,
+            'crit_chance': player.calculate_crit_chance(),
+            'total_attack': player.get_total_attack(),
+            'total_defense': player.get_total_defense(),
             'position': player.position,
             'skill_points': player.skill_points,
+            'unlocked_skills_count': len(player.unlocked_skills),
             'equipped_weapon': player.equipped_weapon.name if player.equipped_weapon else None,
             'equipped_armor': player.equipped_armor.name if player.equipped_armor else None,
             'equipped_shield': player.equipped_shield.name if player.equipped_shield else None,
@@ -93,6 +106,44 @@ def get_game_state():
             'has_treasure': world.has_treasure(player.position),
         },
         'directions': world.get_available_directions(player.position)
+    })
+
+
+@app.route('/api/collect_treasure', methods=['POST'])
+def collect_treasure():
+    """Coleta tesouro do baú da sala atual"""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    game_data = active_games[game_id]
+    player = game_data['player']
+    world = game_data['world']
+
+    room_id = player.position
+
+    if not world.has_treasure(room_id):
+        return jsonify({'success': False, 'message': 'Não há baú disponível nesta sala.'})
+
+    items = world.get_item_from_room(room_id, player.player_class, source='chest')
+
+    if not items:
+        return jsonify({'success': False, 'message': 'O baú está vazio.'})
+
+    collected = []
+    for item in items:
+        player.add_to_inventory(item)
+        collected.append({
+            'name': item.name,
+            'type': item.item_type,
+            'description': getattr(item, 'description', '')
+        })
+
+    return jsonify({
+        'success': True,
+        'message': f'Você coletou {len(collected)} item(ns) do baú!',
+        'items': collected
     })
 
 
@@ -115,9 +166,252 @@ def move():
     
     if new_room:
         player.position = new_room
+        world.visited_rooms.add(new_room)
         return jsonify({'success': True, 'message': f'Você se move para {direction}'})
     else:
         return jsonify({'success': False, 'message': 'Não é possível ir nessa direção!'})
+
+
+@app.route('/api/status')
+def get_status_data():
+    """Retorna status detalhado do jogador e progresso da dungeon"""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    game_data = active_games[game_id]
+    player = game_data['player']
+    world = game_data['world']
+
+    world.visited_rooms.add(player.position)
+    total_rooms = len(world.rooms)
+    visited_count = len(world.visited_rooms)
+    defeated_count = len(world.defeated_enemies)
+    looted_count = len(world.looted_rooms)
+
+    return jsonify({
+        'player': {
+            'name': player.name,
+            'class': player.player_class,
+            'level': player.level,
+            'hp': player.hp,
+            'max_hp': player.max_hp,
+            'mana': player.mana,
+            'max_mana': player.max_mana,
+            'max_pa': getattr(player, 'max_pa', 6),
+            'xp': player.xp,
+            'xp_needed': player.get_xp_needed(),
+            'strength': player.strength,
+            'vitality': player.vitality,
+            'agility': player.agility,
+            'crit_chance': player.calculate_crit_chance(),
+            'attack': player.get_total_attack(),
+            'defense': player.get_total_defense(),
+            'skill_points': player.skill_points,
+            'attribute_points': getattr(player, 'attribute_points', 0),
+            'unlocked_skills_count': len(player.unlocked_skills),
+            'position': player.position,
+            'equipped': {
+                'weapon': player.equipped_weapon.name if player.equipped_weapon else None,
+                'shield': player.equipped_shield.name if player.equipped_shield else None,
+                'armor': player.equipped_armor.name if player.equipped_armor else None,
+            }
+        },
+        'world': {
+            'total_rooms': total_rooms,
+            'visited_rooms': visited_count,
+            'visited_percent': round((visited_count / total_rooms) * 100, 1) if total_rooms else 0,
+            'defeated_enemies': defeated_count,
+            'looted_rooms': looted_count,
+            'current_room': player.position,
+        }
+    })
+
+
+@app.route('/api/status/spend_attribute', methods=['POST'])
+def spend_attribute_point():
+    """Gasta 1 ponto de atributo via web"""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    data = request.json or {}
+    attribute = data.get('attribute')
+
+    player = active_games[game_id]['player']
+    success, message = player.spend_attribute_point(attribute)
+
+    return jsonify({
+        'success': success,
+        'message': message,
+        'attribute_points': getattr(player, 'attribute_points', 0),
+        'stats': {
+            'strength': player.strength,
+            'vitality': player.vitality,
+            'agility': player.agility,
+            'max_mana': player.max_mana,
+            'hp': player.hp,
+            'max_hp': player.max_hp,
+            'attack': player.get_total_attack(),
+            'defense': player.get_total_defense(),
+        }
+    })
+
+
+@app.route('/api/inventory')
+def get_inventory():
+    """Retorna inventário do jogador"""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    player = active_games[game_id]['player']
+
+    items = []
+    for idx, item in enumerate(player.inventory):
+        item_data = {
+            'index': idx,
+            'name': item.name,
+            'type': item.item_type,
+            'description': getattr(item, 'description', ''),
+            'action': 'equipar'
+        }
+
+        if item.item_type == 'weapon':
+            item_data['attack_bonus'] = getattr(item, 'attack_bonus', 0)
+            item_data['action'] = 'equipar'
+        elif item.item_type == 'shield':
+            item_data['defense_bonus'] = getattr(item, 'defense_bonus', 0)
+            item_data['action'] = 'equipar'
+        elif item.item_type == 'armor':
+            item_data['defense_bonus'] = getattr(item, 'defense_bonus', 0)
+            item_data['mana_bonus'] = getattr(item, 'mana_bonus', 0)
+            item_data['action'] = 'equipar'
+        elif item.item_type == 'consumable':
+            item_data['heal_amount'] = getattr(item, 'heal_amount', 0)
+            item_data['action'] = 'usar'
+        else:
+            item_data['action'] = 'info'
+
+        items.append(item_data)
+
+    return jsonify({
+        'items': items,
+        'equipped': {
+            'weapon': player.equipped_weapon.name if player.equipped_weapon else None,
+            'shield': player.equipped_shield.name if player.equipped_shield else None,
+            'armor': player.equipped_armor.name if player.equipped_armor else None
+        },
+        'stats': {
+            'hp': player.hp,
+            'max_hp': player.max_hp,
+            'max_pa': getattr(player, 'max_pa', 6),
+            'skill_points': player.skill_points,
+            'attack': player.get_total_attack(),
+            'defense': player.get_total_defense()
+        }
+    })
+
+
+@app.route('/api/inventory/action', methods=['POST'])
+def inventory_action():
+    """Executa ação em item do inventário (equipar/usar)"""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    data = request.json
+    item_index = data.get('item_index')
+
+    if item_index is None:
+        return jsonify({'success': False, 'message': 'Item inválido'})
+
+    game_data = active_games[game_id]
+    player = game_data['player']
+
+    try:
+        item_index = int(item_index)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Índice inválido'})
+
+    if item_index < 0 or item_index >= len(player.inventory):
+        return jsonify({'success': False, 'message': 'Item não encontrado'})
+
+    item = player.inventory[item_index]
+
+    if item.item_type == 'consumable':
+        success = player.use_item(item_index)
+        message = f'{item.name} usado com sucesso!' if success else f'Não foi possível usar {item.name}.'
+        return jsonify({'success': success, 'message': message})
+
+    if item.item_type == 'weapon':
+        player.equip_weapon(item)
+        return jsonify({'success': True, 'message': f'{item.name} equipada!'})
+
+    if item.item_type == 'shield':
+        player.equip_shield(item)
+        return jsonify({'success': True, 'message': f'{item.name} equipado!'})
+
+    if item.item_type == 'armor':
+        player.equip_armor(item)
+        return jsonify({'success': True, 'message': f'{item.name} equipada!'})
+
+    return jsonify({'success': False, 'message': 'Este item não tem ação disponível'})
+
+
+@app.route('/api/map')
+def get_map_data():
+    """Retorna dados do mapa para renderização web"""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    game_data = active_games[game_id]
+    player = game_data['player']
+    world = game_data['world']
+
+    from minimap import MiniMap
+    mini_map = MiniMap(world)
+    positions = mini_map.room_positions
+
+    rooms = []
+    for room_id, room in world.rooms.items():
+        pos = positions.get(room_id)
+        if not pos:
+            continue
+
+        visited = room_id in world.visited_rooms or room_id == player.position
+        room_type = room.get('type', 'normal')
+        is_current = room_id == player.position
+        has_enemy = room_id not in world.defeated_enemies and bool(room.get('enemy'))
+        has_treasure = room_id not in world.looted_rooms and bool(room.get('items'))
+
+        rooms.append({
+            'id': room_id,
+            'name': room.get('name', f'Sala {room_id}'),
+            'description': room.get('description', ''),
+            'type': room_type,
+            'row': pos[0],
+            'col': pos[1],
+            'visited': visited,
+            'current': is_current,
+            'has_enemy': has_enemy,
+            'has_treasure': has_treasure,
+            'defeated': room_id in world.defeated_enemies,
+            'looted': room_id in world.looted_rooms,
+            'connections': list(room.get('connections', {}).values())
+        })
+
+    return jsonify({
+        'rooms': rooms,
+        'current_room': player.position,
+        'visited_rooms': list(world.visited_rooms)
+    })
 
 
 @app.route('/skills')
@@ -154,7 +448,7 @@ def get_skills():
             'description': skill.description,
             'tier': skill.tier,
             'path': skill.path,
-            'cost_mana': skill.cost_mana,
+            'cost_pa': get_skill_pa_cost(skill),
             'cooldown': skill.cooldown,
             'power': skill.power,
             'requirements': skill.requirements,
@@ -308,21 +602,13 @@ def combat_action():
         if success:
             messages.append(f"Você atacou {combat.enemy.name}!")
             messages.append("💡 Você ganhará +1 PA extra no próximo turno!")
+            messages.append("⏭️ Turno encerrado após ataque.")
     
     elif action == 'defend':
         success = combat.player_defend()
         if success:
             messages.append("🛡️ Você está defendendo!")
             messages.append("⏭️ Seu turno termina automaticamente!")
-            
-            # Defender termina turno automaticamente
-            if not combat.is_combat_over():
-                combat.enemy_turn()
-                messages.append(f"{combat.enemy.name} realizou suas ações!")
-                
-                # Regenera PA do jogador
-                combat.start_player_turn()
-                messages.append(f"✨ Novo turno! {combat.player_pa} PA disponível")
     
     elif action == 'skill':
         skill_id = data.get('skill_id')
@@ -331,6 +617,7 @@ def combat_action():
             if success:
                 skill = player.skill_tree.get_skill(skill_id)
                 messages.append(f"Você usou {skill.name}!")
+                messages.append("⏭️ Turno encerrado após habilidade.")
     
     elif action == 'item':
         item_idx = data.get('item_idx')
@@ -338,6 +625,7 @@ def combat_action():
             success = combat.player_use_item(item_idx)
             if success:
                 messages.append("Item usado!")
+                messages.append("⏭️ Turno encerrado após item.")
     
     elif action == 'flee':
         success = combat.attempt_flee()
@@ -345,8 +633,7 @@ def combat_action():
             messages.append("Você fugiu!")
     
     elif action == 'end_turn':
-        # Termina turno do jogador
-        combat.player_pa = 0
+        # Termina turno do jogador sem zerar PA (preserva PA restante)
         messages.append("⏭️ Turno terminado!")
         success = True
         
@@ -358,6 +645,13 @@ def combat_action():
             # Regenera PA do jogador
             combat.start_player_turn()
             messages.append(f"✨ Novo turno! {combat.player_pa} PA disponível")
+
+    # Regra nova: ação válida encerra turno automaticamente (exceto fuga e end_turn)
+    if action in ['attack', 'defend', 'skill', 'item'] and success and not combat.is_combat_over():
+        combat.enemy_turn()
+        messages.append(f"{combat.enemy.name} realizou suas ações!")
+        combat.start_player_turn()
+        messages.append(f"✨ Novo turno! {combat.player_pa} PA disponível")
     
     # Verifica se combate acabou
     combat_over = combat.is_combat_over()
@@ -371,6 +665,7 @@ def combat_action():
             # Marca inimigo como derrotado
             world = game_data['world']
             world.defeat_enemy(player.position)
+            player.gain_xp(combat.enemy.xp_reward, auto_distribute=True)
             messages.append(f"Você derrotou {combat.enemy.name}!")
             messages.append(f"+{combat.enemy.xp_reward} XP!")
     
@@ -398,8 +693,6 @@ def get_combat_state_data(combat, player):
             'name': player.name,
             'hp': player.hp,
             'max_hp': player.max_hp,
-            'mana': player.mana,
-            'max_mana': player.max_mana,
             'defending': combat.player_defending,
             'status': combat.player_status
         },
@@ -434,16 +727,13 @@ def get_available_skills(player, combat):
             else:
                 pa_cost = combat.PA_COSTS['skill_tier1']
             
-            can_use = (combat.player_pa >= pa_cost and 
-                      player.mana >= skill.cost_mana and 
-                      skill.current_cooldown == 0)
+            can_use = (combat.player_pa >= pa_cost and skill.current_cooldown == 0)
             
             skills.append({
                 'id': skill_id,
                 'name': skill.name,
                 'description': skill.description,
                 'pa_cost': pa_cost,
-                'mana_cost': skill.cost_mana,
                 'cooldown': skill.current_cooldown,
                 'can_use': can_use
             })
@@ -466,6 +756,17 @@ def get_available_items(player):
     return items
 
 
+def get_skill_pa_cost(skill):
+    """Calcula custo de PA de uma skill pelo tier"""
+    if skill.tier == 'ultimate':
+        return 5
+    if skill.tier == 3:
+        return 4
+    if skill.tier == 2:
+        return 3
+    return 2
+
+
 if __name__ == '__main__':
     # Cria pasta de templates se não existir
     os.makedirs('templates', exist_ok=True)
@@ -475,7 +776,7 @@ if __name__ == '__main__':
     print("🎮 DUNGEON OF THE FORGOTTEN - Web Edition")
     print("="*60)
     print("\n🌐 Servidor iniciado!")
-    print("📍 Acesse: http://localhost:5000")
+    print("📍 Acesse: http://localhost:5050")
     print("\n💡 Pressione Ctrl+C para parar o servidor\n")
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=True, host='0.0.0.0', port=5050)
