@@ -13,12 +13,117 @@ body {
     overflow-x: hidden;
 }
 
+body.menu-page {
+    background:
+        radial-gradient(circle at top, rgba(231, 169, 74, 0.18) 0%, rgba(231, 169, 74, 0) 32%),
+        radial-gradient(circle at 20% 20%, rgba(146, 45, 27, 0.28) 0%, rgba(146, 45, 27, 0) 36%),
+        linear-gradient(180deg, #120d0b 0%, #1f1410 35%, #090909 100%);
+    position: relative;
+}
+
+body.menu-page::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        linear-gradient(180deg, rgba(0, 0, 0, 0.15), rgba(0, 0, 0, 0.72)),
+        repeating-linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0.02) 0,
+            rgba(255, 255, 255, 0.02) 1px,
+            transparent 1px,
+            transparent 90px
+        );
+    pointer-events: none;
+}
+
 .container {
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
     padding: 20px;
+}
+
+body.menu-page .container {
+    position: relative;
+    isolation: isolate;
+}
+
+.menu-ambience {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.mist,
+.ember {
+    position: absolute;
+    display: block;
+}
+
+.mist {
+    width: 34vw;
+    height: 34vw;
+    min-width: 240px;
+    min-height: 240px;
+    border-radius: 50%;
+    filter: blur(18px);
+    opacity: 0.35;
+}
+
+.mist-left {
+    left: -8%;
+    top: 12%;
+    background: radial-gradient(circle, rgba(176, 58, 32, 0.45) 0%, rgba(176, 58, 32, 0) 68%);
+}
+
+.mist-right {
+    right: -10%;
+    bottom: 8%;
+    background: radial-gradient(circle, rgba(236, 181, 92, 0.22) 0%, rgba(236, 181, 92, 0) 70%);
+}
+
+.ember {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 225, 154, 1) 0%, rgba(255, 122, 46, 0.9) 45%, rgba(255, 122, 46, 0) 72%);
+    box-shadow: 0 0 20px rgba(255, 144, 42, 0.55);
+    animation: ember-float 8s linear infinite;
+}
+
+.ember-1 {
+    left: 14%;
+    bottom: 18%;
+    animation-delay: 0s;
+}
+
+.ember-2 {
+    right: 18%;
+    bottom: 24%;
+    animation-delay: 2.5s;
+}
+
+.ember-3 {
+    left: 48%;
+    bottom: 10%;
+    animation-delay: 5s;
+}
+
+@keyframes ember-float {
+    0% {
+        transform: translateY(0) scale(0.75);
+        opacity: 0;
+    }
+    15% {
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(-180px) translateX(24px) scale(1.15);
+        opacity: 0;
+    }
 }
 
 /* === MENU PRINCIPAL === */
@@ -33,6 +138,30 @@ body {
     box-shadow: 0 10px 50px rgba(255, 215, 0, 0.3);
 }
 
+body.menu-page .menu-container {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+    padding: 52px 44px;
+    background:
+        linear-gradient(180deg, rgba(41, 24, 17, 0.92) 0%, rgba(19, 11, 8, 0.94) 100%);
+    border: 1px solid rgba(224, 173, 88, 0.5);
+    box-shadow:
+        0 28px 70px rgba(0, 0, 0, 0.58),
+        0 0 0 1px rgba(255, 214, 143, 0.08) inset,
+        0 0 40px rgba(162, 59, 31, 0.22);
+    overflow: hidden;
+}
+
+body.menu-page .menu-container::before {
+    content: "";
+    position: absolute;
+    inset: 14px;
+    border: 1px solid rgba(233, 191, 121, 0.14);
+    border-radius: 14px;
+    pointer-events: none;
+}
+
 .game-title {
     font-size: 3rem;
     color: #FFD700;
@@ -40,6 +169,13 @@ body {
                  0 0 30px rgba(255, 215, 0, 0.6);
     margin-bottom: 10px;
     animation: pulse 2s ease-in-out infinite;
+}
+
+body.menu-page .game-title {
+    color: #f3d49b;
+    text-shadow:
+        0 0 18px rgba(243, 212, 155, 0.22),
+        0 0 34px rgba(168, 74, 37, 0.24);
 }
 
 @keyframes pulse {
@@ -55,6 +191,12 @@ body {
     font-size: 1.2rem;
     color: #999;
     margin-bottom: 40px;
+}
+
+body.menu-page .game-subtitle {
+    color: #c1aa8b;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .menu-buttons {
@@ -77,8 +219,30 @@ body {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
+body.menu-page .menu-btn {
+    position: relative;
+    border: 1px solid rgba(241, 198, 117, 0.28);
+    background: linear-gradient(180deg, rgba(86, 43, 24, 0.95) 0%, rgba(47, 21, 12, 0.95) 100%);
+    color: #f7e6c3;
+    box-shadow:
+        0 12px 28px rgba(0, 0, 0, 0.34),
+        0 0 0 1px rgba(255, 225, 173, 0.04) inset;
+}
+
+body.menu-page .menu-btn:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255, 211, 128, 0.56);
+    box-shadow:
+        0 18px 34px rgba(0, 0, 0, 0.42),
+        0 0 24px rgba(196, 93, 44, 0.18);
+}
+
 .btn-new {
     background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+}
+
+body.menu-page .btn-new {
+    background: linear-gradient(180deg, #8b4f2d 0%, #5a2918 100%);
 }
 
 .btn-new:hover {
@@ -90,6 +254,10 @@ body {
     background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
 }
 
+body.menu-page .btn-load {
+    background: linear-gradient(180deg, #704126 0%, #472213 100%);
+}
+
 .btn-load:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
@@ -97,6 +265,10 @@ body {
 
 .btn-info {
     background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+}
+
+body.menu-page .btn-info {
+    background: linear-gradient(180deg, #5d3020 0%, #34160e 100%);
 }
 
 .btn-info:hover {
@@ -108,6 +280,10 @@ body {
     background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
 }
 
+body.menu-page .btn-exit {
+    background: linear-gradient(180deg, #442018 0%, #23100b 100%);
+}
+
 .btn-exit:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
@@ -117,6 +293,21 @@ body {
     margin-top: 30px;
     color: #666;
     font-size: 0.9rem;
+}
+
+body.menu-page .version {
+    color: #8f7761;
+}
+
+@media (max-width: 768px) {
+    body.menu-page .menu-container {
+        padding: 36px 24px;
+    }
+
+    .mist {
+        width: 55vw;
+        height: 55vw;
+    }
 }
 
 /* === CRIAÇÃO DE PERSONAGEM === */

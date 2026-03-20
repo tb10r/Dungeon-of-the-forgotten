@@ -9,28 +9,28 @@
         .skill-tree-container {
             width: 100%;
             height: 100vh;
-            background: radial-gradient(circle at 50% 50%, #1a1a2e, #0f0f1a);
+            background: radial-gradient(circle at 50% 18%, rgba(176, 88, 44, 0.15), transparent 24%), linear-gradient(180deg, #160f0d, #080606);
             overflow: hidden;
             position: relative;
         }
 
         .skill-tree-header {
             padding: 20px;
-            background: linear-gradient(135deg, #1e1e2f, #16213e);
-            border-bottom: 2px solid #ffd700;
+            background: linear-gradient(180deg, rgba(44, 27, 19, 0.92) 0%, rgba(18, 11, 8, 0.96) 100%);
+            border-bottom: 1px solid rgba(227, 181, 106, 0.4);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
 
         .skill-points-display {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            background: linear-gradient(180deg, #e0b267, #b26f35);
             padding: 15px 30px;
             border-radius: 25px;
             font-size: 1.3em;
             font-weight: bold;
-            color: #1a1a2e;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            color: #1b120d;
+            box-shadow: 0 0 20px rgba(227, 181, 106, 0.3);
             animation: pulse 2s infinite;
         }
 
@@ -40,18 +40,19 @@
         }
 
         .back-button {
-            background: linear-gradient(135deg, #dc143c, #8b0000);
-            color: white;
+            background: linear-gradient(180deg, #743324 0%, #451a12 100%);
+            color: #f2e4c8;
             padding: 12px 24px;
             border-radius: 15px;
             text-decoration: none;
             font-weight: bold;
             transition: all 0.3s;
+            border: 1px solid rgba(227, 181, 106, 0.22);
         }
 
         .back-button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(220, 20, 60, 0.5);
+            box-shadow: 0 16px 28px rgba(0, 0, 0, 0.34), 0 0 18px rgba(181, 101, 61, 0.16);
         }
 
         .skill-tree-canvas {
@@ -87,8 +88,8 @@
         .path-header {
             font-size: 1.5em;
             font-weight: bold;
-            color: #ffd700;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+            color: #f3dcb0;
+            text-shadow: 0 0 10px rgba(227, 181, 106, 0.24);
             margin-bottom: 20px;
             text-align: center;
         }
@@ -121,21 +122,21 @@
         }
 
         .skill-node.locked {
-            background: linear-gradient(135deg, #2d2d44, #1a1a2e);
-            border: 3px solid #4a4a6a;
-            color: #666;
+            background: linear-gradient(180deg, #3c251b, #20130d);
+            border: 3px solid #5a4030;
+            color: #7f6957;
         }
 
         .skill-node.available {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            border: 3px solid #fff;
-            color: #1a1a2e;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            background: linear-gradient(180deg, #e0b267, #b26f35);
+            border: 3px solid #f3dcb0;
+            color: #1b120d;
+            box-shadow: 0 0 20px rgba(227, 181, 106, 0.35);
             animation: glow 2s infinite;
         }
 
         .skill-node.available::before {
-            background: radial-gradient(circle, rgba(255, 215, 0, 0.3), transparent);
+            background: radial-gradient(circle, rgba(227, 181, 106, 0.3), transparent);
             opacity: 1;
         }
 
@@ -145,10 +146,10 @@
         }
 
         .skill-node.unlocked {
-            background: linear-gradient(135deg, #00ff88, #00cc66);
-            border: 3px solid #00ffaa;
-            color: #1a1a2e;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5);
+            background: linear-gradient(180deg, #8a4f2d, #572717);
+            border: 3px solid #e3b56a;
+            color: #f2e4c8;
+            box-shadow: 0 0 20px rgba(181, 101, 61, 0.28);
         }
 
         .skill-node.ultimate {
@@ -188,7 +189,7 @@
 
         .connection-line {
             position: absolute;
-            background: linear-gradient(to bottom, #4a4a6a, #2d2d44);
+            background: linear-gradient(to bottom, #6c4a37, #362015);
             width: 3px;
             height: 80px;
             left: 50%;
@@ -198,14 +199,14 @@
         }
 
         .connection-line.unlocked {
-            background: linear-gradient(to bottom, #00ff88, #00cc66);
-            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            background: linear-gradient(to bottom, #e3b56a, #8a4f2d);
+            box-shadow: 0 0 10px rgba(227, 181, 106, 0.35);
         }
 
         .skill-tooltip {
             position: fixed;
-            background: rgba(26, 26, 46, 0.98);
-            border: 2px solid #ffd700;
+            background: linear-gradient(180deg, rgba(44, 27, 19, 0.96) 0%, rgba(18, 11, 8, 0.98) 100%);
+            border: 1px solid rgba(227, 181, 106, 0.45);
             border-radius: 15px;
             padding: 20px;
             max-width: 350px;
@@ -222,12 +223,12 @@
         .tooltip-title {
             font-size: 1.3em;
             font-weight: bold;
-            color: #ffd700;
+            color: #f3dcb0;
             margin-bottom: 10px;
         }
 
         .tooltip-description {
-            color: #ccc;
+            color: #b8a186;
             margin-bottom: 15px;
             line-height: 1.5;
         }
@@ -237,11 +238,11 @@
             grid-template-columns: 1fr 1fr;
             gap: 10px;
             font-size: 0.9em;
-            color: #aaa;
+            color: #b8a186;
         }
 
         .tooltip-stat {
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(242, 228, 200, 0.04);
             padding: 5px 10px;
             border-radius: 5px;
         }
@@ -249,8 +250,8 @@
         .tooltip-requirements {
             margin-top: 15px;
             padding-top: 15px;
-            border-top: 1px solid #4a4a6a;
-            color: #ff6b6b;
+            border-top: 1px solid rgba(227, 181, 106, 0.16);
+            color: #de8c68;
             font-size: 0.9em;
         }
 

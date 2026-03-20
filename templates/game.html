@@ -25,10 +25,11 @@
             width: min(980px, 100%);
             max-height: 85vh;
             overflow: auto;
-            background: #141726;
-            border: 2px solid #d6b15a;
+            background: linear-gradient(180deg, rgba(43, 26, 19, 0.98) 0%, rgba(18, 11, 8, 0.98) 100%);
+            border: 1px solid rgba(227, 181, 106, 0.45);
             border-radius: 14px;
             padding: 18px;
+            box-shadow: 0 28px 60px rgba(0, 0, 0, 0.55);
         }
 
         .overlay-header {
@@ -39,15 +40,15 @@
         }
 
         .overlay-title {
-            color: #f0d58a;
+            color: #f3dcb0;
             font-size: 1.2rem;
             font-weight: 700;
         }
 
         .overlay-close {
-            border: none;
-            background: #8b2c2c;
-            color: #fff;
+            border: 1px solid rgba(227, 181, 106, 0.24);
+            background: linear-gradient(180deg, #693021 0%, #39160f 100%);
+            color: #f2e4c8;
             border-radius: 8px;
             padding: 8px 12px;
             cursor: pointer;
@@ -60,35 +61,35 @@
         }
 
         .inv-item {
-            border: 1px solid #3a3f57;
+            border: 1px solid rgba(227, 181, 106, 0.16);
             border-radius: 10px;
             padding: 10px;
-            background: #1a1f33;
+            background: rgba(242, 228, 200, 0.04);
         }
 
         .inv-item h4 {
             margin: 0 0 6px;
-            color: #f0d58a;
+            color: #f3dcb0;
             font-size: 0.95rem;
         }
 
         .inv-item p {
             margin: 0 0 8px;
-            color: #c8cde0;
+            color: #b8a186;
             font-size: 0.85rem;
             line-height: 1.25;
         }
 
         .inv-meta {
             font-size: 0.8rem;
-            color: #a8b0c9;
+            color: #b8a186;
             margin-bottom: 8px;
         }
 
         .inv-action {
-            border: none;
-            background: #2f7a4e;
-            color: #fff;
+            border: 1px solid rgba(227, 181, 106, 0.24);
+            background: linear-gradient(180deg, #8a4f2d 0%, #572717 100%);
+            color: #f2e4c8;
             border-radius: 8px;
             padding: 8px 10px;
             cursor: pointer;
@@ -97,9 +98,9 @@
 
         .map-wrap {
             overflow: auto;
-            border: 1px solid #3a3f57;
+            border: 1px solid rgba(227, 181, 106, 0.16);
             border-radius: 10px;
-            background: #101427;
+            background: rgba(0, 0, 0, 0.28);
             padding: 12px;
         }
 
@@ -108,13 +109,13 @@
             flex-wrap: wrap;
             gap: 10px;
             margin-bottom: 12px;
-            color: #b9c0d9;
+            color: #b8a186;
             font-size: 0.86rem;
         }
 
         .map-legend span {
-            background: #1a1f33;
-            border: 1px solid #334062;
+            background: rgba(242, 228, 200, 0.04);
+            border: 1px solid rgba(227, 181, 106, 0.16);
             border-radius: 8px;
             padding: 4px 8px;
         }
@@ -144,8 +145,8 @@
             justify-content: center;
             font-size: 0.9rem;
             cursor: default;
-            border: 2px solid #3f465f;
-            background: #202741;
+            border: 2px solid rgba(227, 181, 106, 0.16);
+            background: #2b1b14;
         }
 
         .map-room-id {
@@ -156,11 +157,11 @@
             text-align: center;
             font-size: 0.62rem;
             font-weight: 700;
-            color: #101427;
-            background: #f0d58a;
+            color: #1b120d;
+            background: #e3b56a;
             border-radius: 999px;
             padding: 1px 4px;
-            border: 1px solid #6d5a2b;
+            border: 1px solid #6d4a28;
         }
 
         .map-room.current {
@@ -180,15 +181,15 @@
         }
 
         .status-card {
-            border: 1px solid #3a3f57;
+            border: 1px solid rgba(227, 181, 106, 0.16);
             border-radius: 10px;
             padding: 12px;
-            background: #1a1f33;
+            background: rgba(242, 228, 200, 0.04);
         }
 
         .status-card h4 {
             margin-bottom: 8px;
-            color: #f0d58a;
+            color: #f3dcb0;
             font-size: 0.96rem;
         }
 
@@ -196,25 +197,25 @@
             display: grid;
             gap: 6px;
             font-size: 0.9rem;
-            color: #c8cde0;
+            color: #b8a186;
         }
 
         .status-line strong {
-            color: #eef1ff;
+            color: #f2e4c8;
         }
 
         .status-progress {
             margin-top: 8px;
             height: 10px;
-            background: #0f1322;
+            background: rgba(0, 0, 0, 0.42);
             border-radius: 999px;
             overflow: hidden;
-            border: 1px solid #32415d;
+            border: 1px solid rgba(227, 181, 106, 0.16);
         }
 
         .status-progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #2e9d65, #67d997);
+            background: linear-gradient(90deg, #8a4f2d, #d49657);
         }
 
         .attr-actions {
@@ -225,9 +226,9 @@
         }
 
         .attr-btn {
-            border: 1px solid #3a4a73;
-            background: #243457;
-            color: #f1f5ff;
+            border: 1px solid rgba(227, 181, 106, 0.2);
+            background: linear-gradient(180deg, #5d3020 0%, #35160e 100%);
+            color: #f2e4c8;
             border-radius: 8px;
             padding: 7px 8px;
             cursor: pointer;

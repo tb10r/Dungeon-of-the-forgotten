@@ -6,12 +6,19 @@
     <title>Dungeon of the Forgotten</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="menu-page">
     <div class="container">
+        <div class="menu-ambience" aria-hidden="true">
+            <span class="mist mist-left"></span>
+            <span class="mist mist-right"></span>
+            <span class="ember ember-1"></span>
+            <span class="ember ember-2"></span>
+            <span class="ember ember-3"></span>
+        </div>
         <div class="menu-container">
             <h1 class="game-title">⚔️ DUNGEON OF THE FORGOTTEN ⚔️</h1>
             <p class="game-subtitle">Uma Aventura Épica Te Aguarda</p>
-            
+        
             <div class="menu-buttons">
                 <a href="{{ url_for('new_game') }}" class="menu-btn btn-new">
                     🎮 NOVO JOGO
