@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saída - Dungeon of the Forgotten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="menu-page">
+    <div class="container">
+        <div class="menu-ambience" aria-hidden="true">
+            <span class="mist mist-left"></span>
+            <span class="mist mist-right"></span>
+            <span class="ember ember-1"></span>
+            <span class="ember ember-2"></span>
+            <span class="ember ember-3"></span>
+        </div>
+
+        <div class="menu-container exit-panel">
+            {% if escaped %}
+            <h1 class="game-title">👑 VOCÊ ESCAPOU 👑</h1>
+            <p class="game-subtitle">A chave abriu o caminho para a liberdade</p>
+            <p class="exit-copy">
+                Você atravessou a saída da dungeon e voltou à superfície. O ar fresco finalmente alcança seus pulmões, e sua jornada termina em vitória.
+            </p>
+            {% else %}
+            <h1 class="game-title">⚔️ JORNADA ENCERRADA ⚔️</h1>
+            <p class="game-subtitle">Sua sessão foi encerrada</p>
+            <p class="exit-copy">
+                As portas da dungeon se fecharam por enquanto. Quando quiser, você pode voltar ao menu principal ou iniciar uma nova aventura sob a mesma atmosfera do reino esquecido.
+            </p>
+            {% endif %}
+
+            <div class="menu-buttons">
+                <a href="{{ url_for('index') }}" class="menu-btn btn-load">🏰 VOLTAR AO MENU</a>
+                <a href="{{ url_for('new_game') }}" class="menu-btn btn-new">🎮 NOVA AVENTURA</a>
+                <a href="{{ url_for('saves') }}" class="menu-btn btn-info">📂 VER SAVES</a>
+            </div>
+
+            <div class="version">{% if escaped %}A dungeon ficou para trás{% else %}Até a próxima descida à dungeon{% endif %}</div>
+        </div>
+    </div>
+</body>
+</html>

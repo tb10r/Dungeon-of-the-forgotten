@@ -12,16 +12,33 @@ app.secret_key = secrets.token_hex(16)
 active_games = {}
 
 
+def clear_current_game():
+    """Remove o jogo ativo da sessão atual."""
+    game_id = session.get('game_id')
+    if game_id:
+        active_games.pop(game_id, None)
+    session.clear()
+
+
 @app.route('/')
 def index():
     """Página inicial - Menu Principal"""
     return render_template('menu.html')
 
 
+@app.route('/exit')
+def exit_game():
+    """Encerra a sessão atual e mostra tela de saída."""
+    escaped = request.args.get('escaped') == '1'
+    clear_current_game()
+    return render_template('exit.html', escaped=escaped)
+
+
 @app.route('/new_game', methods=['GET', 'POST'])
 def new_game():
     """Cria um novo jogo"""
     if request.method == 'POST':
+        clear_current_game()
         data = request.json
         name = data.get('name', 'Aventureiro')
         player_class = data.get('class', 'guerreiro')
@@ -167,6 +184,23 @@ def move():
     if new_room:
         player.position = new_room
         world.visited_rooms.add(new_room)
+
+        if world.is_exit(new_room):
+            has_key = any(item.item_type == 'key' for item in player.inventory)
+            if has_key:
+                return jsonify({
+                    'success': True,
+                    'message': 'Você alcançou a saída e usou a chave para escapar da dungeon!',
+                    'event': 'exit',
+                    'redirect_url': url_for('exit_game', escaped=1)
+                })
+
+            return jsonify({
+                'success': True,
+                'message': 'A saída está trancada. Você precisa encontrar a Chave da Saída.',
+                'event': 'locked_exit'
+            })
+
         return jsonify({'success': True, 'message': f'Você se move para {direction}'})
     else:
         return jsonify({'success': False, 'message': 'Não é possível ir nessa direção!'})

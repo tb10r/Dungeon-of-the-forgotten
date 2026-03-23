@@ -6,8 +6,15 @@
     <title>Novo Jogo - Dungeon of the Forgotten</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-<body>
+<body class="menu-page">
     <div class="container">
+        <div class="menu-ambience" aria-hidden="true">
+            <span class="mist mist-left"></span>
+            <span class="mist mist-right"></span>
+            <span class="ember ember-1"></span>
+            <span class="ember ember-2"></span>
+            <span class="ember ember-3"></span>
+        </div>
         <div class="character-creation">
             <h1 class="page-title">⚔️ CRIAR PERSONAGEM ⚔️</h1>
             
@@ -56,6 +63,9 @@
                     </button>
                     <button onclick="startGame()" class="btn btn-primary" id="startBtn" disabled>
                         Começar Aventura →
+                    </button>
+                    <button onclick="window.location.href='/exit'" class="btn btn-danger">
+                        Encerrar Sessão
                     </button>
                 </div>
             </div>

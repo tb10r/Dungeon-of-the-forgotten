@@ -53,7 +53,7 @@ class World:
                 "description": "Um salão enorme com teto alto.\nUm orc gigantesco bloqueia a passagem para a saída.",
                 "connections": {"oeste": "4", "leste": "6"},
                 "enemy": "orc_chief",
-                "items": []
+                "items": ["exit_key"]
             },
             "6": {
                 "name": "Saída",

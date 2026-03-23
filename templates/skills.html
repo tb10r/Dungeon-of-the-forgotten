@@ -260,13 +260,13 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, #1e1e2f, #16213e);
-            border: 3px solid #ffd700;
+            background: linear-gradient(180deg, rgba(44, 27, 19, 0.96) 0%, rgba(18, 11, 8, 0.98) 100%);
+            border: 1px solid rgba(227, 181, 106, 0.45);
             border-radius: 20px;
             padding: 30px 50px;
             font-size: 1.5em;
             font-weight: bold;
-            color: #ffd700;
+            color: #f3dcb0;
             display: none;
             z-index: 2000;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
@@ -394,8 +394,11 @@
 <body>
     <div class="skill-tree-container">
         <div class="skill-tree-header">
-            <a href="/game" class="back-button">← Voltar ao Jogo</a>
-            <h1 style="color: #ffd700; text-shadow: 0 0 10px rgba(255, 215, 0, 0.5); margin: 0;">
+            <div class="top-actions">
+                <a href="/game" class="back-button">← Voltar ao Jogo</a>
+                <a href="/exit" class="back-button">🚪 Sair da Dungeon</a>
+            </div>
+            <h1 style="color: #f3dcb0; text-shadow: 0 0 10px rgba(227, 181, 106, 0.24); margin: 0;">
                 🌟 ÁRVORE DE HABILIDADES
             </h1>
             <div class="skill-points-display">
@@ -658,8 +661,8 @@
         function showMessage(message, type) {
             const messageDiv = document.getElementById('unlockMessage');
             messageDiv.textContent = message;
-            messageDiv.style.color = type === 'success' ? '#00ff88' : '#ff6b6b';
-            messageDiv.style.borderColor = type === 'success' ? '#00ff88' : '#ff6b6b';
+            messageDiv.style.color = type === 'success' ? '#f3dcb0' : '#de8c68';
+            messageDiv.style.borderColor = type === 'success' ? '#e3b56a' : '#a7542f';
             messageDiv.classList.add('show');
             
             setTimeout(() => {

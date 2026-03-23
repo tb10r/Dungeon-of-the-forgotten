@@ -351,7 +351,7 @@
                     <button class="btn btn-action" onclick="openMap()">
                         🗺️ Mapa
                     </button>
-                    <button class="btn btn-action btn-danger" onclick="if(confirm('Deseja voltar ao menu principal?')) window.location.href='/'">
+                    <button class="btn btn-action btn-danger" onclick="if(confirm('Deseja encerrar a sessão atual e sair da dungeon?')) window.location.href='/exit'">
                         🚪 Sair
                     </button>
                 </div>
@@ -516,11 +516,11 @@
             let statusHTML = '';
             if (room.has_enemy) {
                 statusHTML += '<div class="status-warning">⚠️ Há um inimigo nesta sala!</div>';
-                statusHTML += '<button class="btn btn-action" style="background: linear-gradient(135deg, #dc143c, #8b0000); width: 100%; margin-top: 10px;" onclick="startCombat()">⚔️ Iniciar Combate</button>';
+                statusHTML += '<button class="btn btn-action btn-combat-trigger" style="width: 100%; margin-top: 10px;" onclick="startCombat()">⚔️ Iniciar Combate</button>';
             }
             if (room.has_treasure) {
                 statusHTML += '<div class="status-info">💎 Há um baú aqui!</div>';
-                statusHTML += '<button class="btn btn-action" style="background: linear-gradient(135deg, #8b6b1f, #d4af37); width: 100%; margin-top: 10px;" onclick="collectTreasure()">🧰 Coletar Baú</button>';
+                statusHTML += '<button class="btn btn-action btn-treasure-trigger" style="width: 100%; margin-top: 10px;" onclick="collectTreasure()">🧰 Coletar Baú</button>';
             }
             document.getElementById('roomStatus').innerHTML = statusHTML;
             
@@ -571,7 +571,17 @@
                 
                 if (data.success) {
                     addLog(`➡️ ${data.message}`);
+
+                    if (data.event === 'exit' && data.redirect_url) {
+                        window.location.href = data.redirect_url;
+                        return;
+                    }
+
                     await loadGameState();
+
+                    if (data.event === 'locked_exit') {
+                        addLog('🔒 A saída continua trancada sem a chave.', 'error');
+                    }
                 } else {
                     addLog(`❌ ${data.message}`, 'error');
                 }
