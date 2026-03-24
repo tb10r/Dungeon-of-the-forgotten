@@ -524,7 +524,6 @@ class World:
             "rusty_sword": rusty_sword,
             "simple_shield": simple_shield,
             "health_potion": health_potion,
-            "exit_key": exit_key,
             "summoning_rune": summoning_rune,
             "necromancer_rune": necromancer_rune,
             "iron_shield": iron_shield,
@@ -553,7 +552,7 @@ class World:
         }
 
         neutral_items = {
-            "health_potion", "exit_key", "summoning_rune", "necromancer_rune",
+            "health_potion", "summoning_rune", "necromancer_rune",
             "simple_shield", "iron_shield", "rusty_sword"
         }
         warrior_items = {
