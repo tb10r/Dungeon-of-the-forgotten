@@ -11,6 +11,45 @@ app.secret_key = secrets.token_hex(16)
 # Dicionário para armazenar jogos ativos (em memória)
 active_games = {}
 
+SPECIAL_BOSS_ROOMS = {
+    '14': {
+        'boss_name': 'Blackwarrior',
+        'display_name': 'Blackwarrior',
+        'required_class': 'guerreiro',
+        'required_rune': 'blackwarrior',
+        'button_label': '🕯️ Invocar Blackwarrior',
+        'locked_message': 'O Altar Sombrio só responde a um guerreiro que carregue a runa de invocação correta.',
+        'story_template': '{player_name} coloca a {rune_name} sobre o Altar Sombrio e invoca o {boss_name}.',
+        'scene_title': 'O Altar Desperta',
+        'scene_subtitle': 'A pedra negra responde apenas ao aço e ao juramento do guerreiro.',
+        'scene_lines': [
+            '{player_name} pressiona a {rune_name} contra o altar e as marcas rúnicas se acendem em âmbar.',
+            'Uma armadura vazia se recompõe em meio à fuligem, e {boss_name} ergue a cabeça para encará-lo.',
+            'O salão se fecha em silêncio. Não há mais ritual a cumprir, apenas batalha a vencer.'
+        ],
+        'victory_title': 'O altar silencia.',
+        'victory_message': 'A essência de {boss_name} se desfaz em cinzas, revelando um espólio forjado para um guerreiro.'
+    },
+    '20': {
+        'boss_name': 'Necromancer',
+        'display_name': 'Necromante',
+        'required_class': 'mago',
+        'required_rune': 'necromancer',
+        'button_label': '🕯️ Invocar Necromante',
+        'locked_message': 'A Cripta Profanada só responde a um mago que carregue a runa necromântica.',
+        'story_template': '{player_name} coloca a {rune_name} no centro do círculo profano e invoca o {boss_name}.',
+        'scene_title': 'A Cripta Respira',
+        'scene_subtitle': 'O círculo profano reconhece a runa e chama por um conjurador.',
+        'scene_lines': [
+            '{player_name} deposita a {rune_name} no centro do círculo, e a poeira dos sarcófagos começa a girar.',
+            'Sussurros antigos ecoam pelas pedras quando {boss_name} emerge, envolto em véus de morte e magia.',
+            'A energia do ritual aperta sua respiração. Fugir agora significaria ceder a própria alma.'
+        ],
+        'victory_title': 'A cripta se aquieta.',
+        'victory_message': 'Os ecos de {boss_name} se rompem no vazio, deixando para trás relíquias destinadas a um mago.'
+    }
+}
+
 
 def clear_current_game():
     """Remove o jogo ativo da sessão atual."""
@@ -18,6 +57,143 @@ def clear_current_game():
     if game_id:
         active_games.pop(game_id, None)
     session.clear()
+
+
+def get_special_boss_state(player, world, room_id):
+    """Retorna o estado de invocação dos bosses especiais para a interface web."""
+    config = SPECIAL_BOSS_ROOMS.get(room_id)
+    if not config or room_id in world.defeated_enemies:
+        return None
+
+    rune = next(
+        (
+            item for item in player.inventory
+            if item.item_type == 'rune' and getattr(item, 'summon_entity', None) == config['required_rune']
+        ),
+        None
+    )
+
+    can_invoke = player.player_class == config['required_class'] and rune is not None
+
+    return {
+        'boss_name': config['boss_name'],
+        'display_name': config.get('display_name', config['boss_name']),
+        'button_label': config['button_label'],
+        'locked_message': None if can_invoke else config['locked_message'],
+        'can_invoke': can_invoke,
+        'rune': rune,
+        'story_template': config['story_template']
+    }
+
+
+def get_multi_enemy_state(world, room_id):
+    """Retorna o estado de salas com múltiplos inimigos para a interface web."""
+    room = world.get_room(room_id)
+    enemies = room.get('enemies') if room else None
+
+    if not room or not enemies or room_id in world.defeated_enemies:
+        return None
+
+    return {
+        'button_label': '⚔️ Enfrentar os Guardiões Finais',
+        'intro_message': f"A {room['name']} guarda uma sequência mortal de adversários.",
+        'enemy_names': list(enemies),
+    }
+
+
+def build_special_boss_intro(player, special_boss, enemy, room_id):
+    """Monta os dados da cena de invocação para bosses especiais."""
+    config = SPECIAL_BOSS_ROOMS[room_id]
+    lines = [
+        line.format(
+            player_name=player.name,
+            rune_name=special_boss['rune'].name,
+            boss_name=enemy.name,
+        )
+        for line in config['scene_lines']
+    ]
+
+    return {
+        'title': config['scene_title'],
+        'subtitle': config['scene_subtitle'],
+        'boss_name': enemy.name,
+        'action_label': f'⚔️ Enfrentar {enemy.name}',
+        'lines': lines,
+    }
+
+
+def serialize_reward_item(item, grant_text):
+    """Serializa um item de recompensa para a interface web."""
+    return {
+        'name': item.name,
+        'type': item.item_type,
+        'description': getattr(item, 'description', ''),
+        'grant_text': grant_text,
+    }
+
+
+def grant_room_rewards(player, world, room_id, source='any'):
+    """Entrega as recompensas de uma sala ao jogador."""
+    items = world.get_item_from_room(room_id, player.player_class, source=source)
+    rewards = []
+
+    for item in items:
+        if item.item_type == 'spell':
+            learned = player.learn_spell(item)
+            grant_text = 'Magia inscrita em sua memória.' if learned else 'O conhecimento já estava selado em sua mente.'
+        else:
+            added = player.add_to_inventory(item)
+            grant_text = 'Relíquia adicionada ao inventário.' if added else 'Relíquia única já estava em sua posse.'
+
+        rewards.append(serialize_reward_item(item, grant_text))
+
+    return rewards
+
+
+def build_special_boss_reward_summary(room_id, boss_name, rewards):
+    """Resume o espólio recebido após derrotar um boss especial."""
+    config = SPECIAL_BOSS_ROOMS.get(room_id)
+    if not config or not rewards:
+        return None
+
+    return {
+        'title': config['victory_title'],
+        'message': config['victory_message'].format(boss_name=boss_name),
+        'items': rewards,
+    }
+
+
+def build_reward_summary(title, message, rewards):
+    """Monta um resumo genérico de recompensas."""
+    if not rewards:
+        return None
+
+    return {
+        'title': title,
+        'message': message,
+        'items': rewards,
+    }
+
+
+def clear_multi_enemy_progress(game_data):
+    """Limpa o estado temporário de salas com múltiplos inimigos."""
+    game_data.pop('multi_enemy_queue', None)
+    game_data.pop('multi_enemy_room_id', None)
+    game_data.pop('multi_enemy_total', None)
+    game_data.pop('multi_enemy_progress', None)
+
+
+def sanitize_save_filename(filename):
+    """Sanitiza o nome do arquivo de save informado pelo usuário."""
+    if not filename:
+        return None
+
+    safe_name = ''.join(char if char.isalnum() or char in {'_', '-'} else '_' for char in filename.strip())
+    if not safe_name:
+        return None
+    if not safe_name.endswith('.json'):
+        safe_name += '.json'
+    return safe_name
 
 
 @app.route('/')
@@ -73,6 +249,18 @@ def game():
     return render_template('game.html')
 
 
+@app.route('/intro')
+def intro():
+    """Prólogo narrativo antes do início da aventura."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return redirect(url_for('index'))
+
+    player = active_games[game_id]['player']
+    return render_template('intro.html', player_name=player.name, player_class=player.player_class)
+
+
 @app.route('/api/game_state')
 def get_game_state():
     """Retorna o estado atual do jogo"""
@@ -89,6 +277,14 @@ def get_game_state():
     world.visited_rooms.add(player.position)
 
     room = world.get_room(player.position)
+    special_boss = get_special_boss_state(player, world, player.position)
+    multi_enemy = get_multi_enemy_state(world, player.position)
+    has_enemy = world.has_enemy(player.position)
+
+    if special_boss:
+        has_enemy = special_boss['can_invoke']
+    elif multi_enemy:
+        has_enemy = True
     
     return jsonify({
         'player': {
@@ -119,8 +315,12 @@ def get_game_state():
             'name': room['name'],
             'description': room['description'],
             'type': room['type'],
-            'has_enemy': world.has_enemy(player.position),
+            'has_enemy': has_enemy,
             'has_treasure': world.has_treasure(player.position),
+            'special_boss_name': special_boss['display_name'] if special_boss else None,
+            'special_boss_button_label': special_boss['button_label'] if special_boss else None,
+            'special_boss_locked_message': special_boss['locked_message'] if special_boss else None,
+            'combat_button_label': multi_enemy['button_label'] if multi_enemy else None,
         },
         'directions': world.get_available_directions(player.position)
     })
@@ -149,18 +349,29 @@ def collect_treasure():
         return jsonify({'success': False, 'message': 'O baú está vazio.'})
 
     collected = []
+    skipped = []
     for item in items:
-        player.add_to_inventory(item)
-        collected.append({
+        added = player.add_to_inventory(item)
+        target = collected if added else skipped
+        target.append({
             'name': item.name,
             'type': item.item_type,
-            'description': getattr(item, 'description', '')
+            'description': getattr(item, 'description', ''),
+        })
+
+    if not collected and skipped:
+        return jsonify({
+            'success': True,
+            'message': 'O baú tinha apenas relíquias que você já possuía.',
+            'items': [],
+            'skipped_items': skipped,
         })
 
     return jsonify({
         'success': True,
         'message': f'Você coletou {len(collected)} item(ns) do baú!',
-        'items': collected
+        'items': collected,
+        'skipped_items': skipped,
     })
 
 
@@ -305,13 +516,15 @@ def get_inventory():
     player = active_games[game_id]['player']
 
     items = []
+    consumable_groups = {}
     for idx, item in enumerate(player.inventory):
         item_data = {
             'index': idx,
             'name': item.name,
             'type': item.item_type,
             'description': getattr(item, 'description', ''),
-            'action': 'equipar'
+            'action': 'equipar',
+            'count': 1,
         }
 
         if item.item_type == 'weapon':
@@ -330,7 +543,15 @@ def get_inventory():
         else:
             item_data['action'] = 'info'
 
-        items.append(item_data)
+        if item.item_type == 'consumable':
+            key = item.name
+            if key in consumable_groups:
+                consumable_groups[key]['count'] += 1
+            else:
+                consumable_groups[key] = item_data
+                items.append(consumable_groups[key])
+        else:
+            items.append(item_data)
 
     return jsonify({
         'items': items,
@@ -397,6 +618,55 @@ def inventory_action():
     return jsonify({'success': False, 'message': 'Este item não tem ação disponível'})
 
 
+@app.route('/api/save', methods=['POST'])
+def save_current_game():
+    """Salva o jogo atual em disco."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    data = request.json or {}
+    filename = sanitize_save_filename(data.get('filename'))
+
+    game_data = active_games[game_id]
+    save_mgr = SaveManager()
+    filepath = save_mgr.save_game(game_data['player'], game_data['world'], filename)
+
+    if not filepath:
+        return jsonify({'success': False, 'message': 'Não foi possível salvar o jogo.'})
+
+    return jsonify({
+        'success': True,
+        'message': f'Jogo salvo com sucesso em {os.path.basename(filepath)}!',
+        'filename': os.path.basename(filepath),
+    })
+
+
+@app.route('/api/load/<path:filename>', methods=['POST'])
+def load_save_file(filename):
+    """Carrega um save salvo em disco para a sessão web."""
+    save_mgr = SaveManager()
+    player, world = save_mgr.load_game(filename)
+
+    if not player or not world:
+        return jsonify({'success': False, 'message': 'Não foi possível carregar o save selecionado.'}), 404
+
+    clear_current_game()
+    game_id = secrets.token_hex(8)
+    session['game_id'] = game_id
+    active_games[game_id] = {
+        'player': player,
+        'world': world,
+    }
+
+    return jsonify({
+        'success': True,
+        'redirect_url': url_for('game'),
+        'message': f'Save {filename} carregado com sucesso!'
+    })
+
+
 @app.route('/api/map')
 def get_map_data():
     """Retorna dados do mapa para renderização web"""
@@ -422,7 +692,7 @@ def get_map_data():
         visited = room_id in world.visited_rooms or room_id == player.position
         room_type = room.get('type', 'normal')
         is_current = room_id == player.position
-        has_enemy = room_id not in world.defeated_enemies and bool(room.get('enemy'))
+        has_enemy = room_id not in world.defeated_enemies and bool(room.get('enemy') or room.get('enemies'))
         has_treasure = room_id not in world.looted_rooms and bool(room.get('items'))
 
         rooms.append({
@@ -438,7 +708,13 @@ def get_map_data():
             'has_treasure': has_treasure,
             'defeated': room_id in world.defeated_enemies,
             'looted': room_id in world.looted_rooms,
-            'connections': list(room.get('connections', {}).values())
+            'connections': [
+                {
+                    'direction': direction,
+                    'target': target_id,
+                }
+                for direction, target_id in room.get('connections', {}).items()
+            ]
         })
 
     return jsonify({
@@ -553,13 +829,68 @@ def start_combat():
     game_data = active_games[game_id]
     player = game_data['player']
     world = game_data['world']
+    room = world.get_room(player.position)
+    special_boss = get_special_boss_state(player, world, player.position)
+    multi_enemy = get_multi_enemy_state(world, player.position)
+
+    if special_boss:
+        if not special_boss['can_invoke']:
+            return jsonify({'success': False, 'message': special_boss['locked_message']})
+
+        enemy = world.create_enemy_by_name(special_boss['boss_name'])
+
+        if not enemy:
+            return jsonify({'success': False, 'message': 'Erro ao invocar o boss especial!'})
+
+        player.remove_from_inventory(special_boss['rune'])
+
+        from combat_pa import CombatPA
+        combat = CombatPA(player, enemy)
+
+        game_data['combat'] = combat
+        game_data['in_combat'] = True
+        game_data['combat_intro'] = special_boss['story_template'].format(
+            player_name=player.name,
+            rune_name=special_boss['rune'].name,
+            boss_name=enemy.name
+        )
+
+        return jsonify({
+            'success': True,
+            'combat_state': get_combat_state_data(combat, player),
+            'redirect_url': url_for('combat_page'),
+            'special_intro': build_special_boss_intro(player, special_boss, enemy, player.position)
+        })
+
+    if multi_enemy:
+        enemy_names = multi_enemy['enemy_names']
+        first_enemy = world.create_enemy_by_name(enemy_names[0])
+
+        if not first_enemy:
+            return jsonify({'success': False, 'message': 'Erro ao iniciar o desafio final!'})
+
+        from combat_pa import CombatPA
+        combat = CombatPA(player, first_enemy)
+
+        game_data['combat'] = combat
+        game_data['in_combat'] = True
+        game_data['combat_intro'] = multi_enemy['intro_message']
+        game_data['multi_enemy_queue'] = enemy_names[1:]
+        game_data['multi_enemy_room_id'] = player.position
+        game_data['multi_enemy_total'] = len(enemy_names)
+        game_data['multi_enemy_progress'] = 1
+
+        return jsonify({
+            'success': True,
+            'combat_state': get_combat_state_data(combat, player),
+            'redirect_url': url_for('combat_page')
+        })
     
     # Verifica se há inimigo na sala
     if not world.has_enemy(player.position):
         return jsonify({'success': False, 'message': 'Não há inimigo nesta sala!'})
     
     # Cria inimigo
-    room = world.get_room(player.position)
     enemy_name = room.get('enemy')
     
     if not enemy_name:
@@ -580,7 +911,8 @@ def start_combat():
     
     return jsonify({
         'success': True,
-        'combat_state': get_combat_state_data(combat, player)
+        'combat_state': get_combat_state_data(combat, player),
+        'redirect_url': url_for('combat_page')
     })
 
 
@@ -602,8 +934,13 @@ def get_combat_state_api():
     
     if not combat:
         return jsonify({'error': 'Combate não encontrado'}), 404
-    
-    return jsonify(get_combat_state_data(combat, player))
+
+    combat_state = get_combat_state_data(combat, player)
+    intro_message = game_data.pop('combat_intro', None)
+    if intro_message:
+        combat_state['intro_message'] = intro_message
+
+    return jsonify(combat_state)
 
 
 @app.route('/api/combat/action', methods=['POST'])
@@ -690,25 +1027,76 @@ def combat_action():
     # Verifica se combate acabou
     combat_over = combat.is_combat_over()
     result = None
+    reward_summary = None
     
     if combat_over:
         result = combat.get_combat_result()
         game_data['in_combat'] = False
+
+        world = game_data['world']
+        room_id = player.position
+        is_multi_enemy_room = game_data.get('multi_enemy_room_id') == room_id
         
         if result == 'victory':
-            # Marca inimigo como derrotado
-            world = game_data['world']
-            world.defeat_enemy(player.position)
             player.gain_xp(combat.enemy.xp_reward, auto_distribute=True)
             messages.append(f"Você derrotou {combat.enemy.name}!")
             messages.append(f"+{combat.enemy.xp_reward} XP!")
+
+            if is_multi_enemy_room and game_data.get('multi_enemy_queue'):
+                next_enemy_name = game_data['multi_enemy_queue'].pop(0)
+                next_enemy = world.create_enemy_by_name(next_enemy_name)
+
+                if not next_enemy:
+                    clear_multi_enemy_progress(game_data)
+                    return jsonify({
+                        'success': False,
+                        'messages': messages + ['❌ Erro ao preparar o próximo inimigo.'],
+                        'combat_state': get_combat_state_data(combat, player),
+                        'combat_over': True,
+                        'result': 'defeat',
+                        'reward_summary': None
+                    })
+
+                player.heal(15)
+                player.restore_mana(10)
+                from combat_pa import CombatPA
+                combat = CombatPA(player, next_enemy)
+                game_data['combat'] = combat
+                game_data['in_combat'] = True
+                game_data['multi_enemy_progress'] = game_data.get('multi_enemy_progress', 1) + 1
+                messages.append('💚 Você recupera 15 HP e 10 mana antes do próximo duelo!')
+                messages.append(
+                    f"⚔️ Próximo combate {game_data['multi_enemy_progress']}/{game_data.get('multi_enemy_total', game_data['multi_enemy_progress'])}: {next_enemy.name}!"
+                )
+                combat_over = False
+                result = None
+            else:
+                world.defeat_enemy(player.position)
+
+                if room_id in SPECIAL_BOSS_ROOMS:
+                    rewards = grant_room_rewards(player, world, room_id, source='boss')
+                    reward_summary = build_special_boss_reward_summary(room_id, combat.enemy.name, rewards)
+                elif is_multi_enemy_room:
+                    rewards = grant_room_rewards(player, world, room_id, source='any')
+                    reward_summary = build_reward_summary(
+                        'Os guardiões tombaram.',
+                        'A câmara final se abriu e o espólio dos duelistas ficou ao seu alcance.',
+                        rewards,
+                    )
+                    clear_multi_enemy_progress(game_data)
+
+        elif is_multi_enemy_room:
+            clear_multi_enemy_progress(game_data)
+        elif result in {'defeat', 'fled'}:
+            clear_multi_enemy_progress(game_data)
     
     return jsonify({
         'success': success,
         'messages': messages,
         'combat_state': get_combat_state_data(combat, player),
         'combat_over': combat_over,
-        'result': result
+        'result': result,
+        'reward_summary': reward_summary
     })
 
 

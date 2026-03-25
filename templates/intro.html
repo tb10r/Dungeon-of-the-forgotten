@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prólogo - Dungeon of the Forgotten</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="menu-page">
+    <div class="container">
+        <div class="menu-ambience" aria-hidden="true">
+            <span class="mist mist-left"></span>
+            <span class="mist mist-right"></span>
+            <span class="ember ember-1"></span>
+            <span class="ember ember-2"></span>
+            <span class="ember ember-3"></span>
+        </div>
+
+        <div class="menu-container story-panel" id="storyPanel" data-player-name="{{ player_name }}" data-player-class="{{ player_class }}">
+            <p class="story-kicker">Prólogo</p>
+            <h1 class="game-title story-title">{{ player_name }}, sua descida começa agora</h1>
+            <p class="game-subtitle">{{ 'Guerreiro' if player_class == 'guerreiro' else 'Mago' }} dos Reinos Esquecidos</p>
+
+            <div class="story-frame">
+                <p id="storyText" class="story-text"></p>
+                <div class="story-progress" aria-hidden="true">
+                    <span class="story-dot active"></span>
+                    <span class="story-dot"></span>
+                    <span class="story-dot"></span>
+                </div>
+            </div>
+
+            <div class="top-actions story-actions">
+                <button id="skipButton" class="btn btn-secondary" type="button">Pular Prólogo</button>
+                <button id="nextButton" class="btn btn-primary" type="button">Continuar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const storyPanel = document.getElementById('storyPanel');
+        const playerName = storyPanel.dataset.playerName;
+        const playerClass = storyPanel.dataset.playerClass;
+
+        const storyLinesByClass = {
+            guerreiro: [
+                `${playerName}, um guerreiro marcado por batalhas e cicatrizes, chega às ruínas onde a Masmorra dos Esquecidos dorme sob pedra, névoa e silêncio antigo.`,
+                `Sedento por glória e decidido a provar sua força, você empurra os portões sombrios e desce sem hesitar, mesmo vendo inscrições de alerta espalhadas pelas colunas quebradas.`,
+                `Mas ao cruzar o limiar, a entrada desaparece atrás de você e vira uma muralha de pedra. Agora sua espada não luta por fama, e sim por sobrevivência até encontrar a saída.`
+            ],
+            mago: [
+                `${playerName}, estudioso das artes arcanas, encontra a Masmorra dos Esquecidos após seguir rumores sobre magia proibida enterrada sob ruínas esquecidas pelo tempo.`,
+                `A curiosidade vence o medo. Com os sentidos atentos ao fluxo arcano no ar, você atravessa a entrada sombria decidido a descobrir que segredos foram selados naquele lugar.`,
+                `Então a passagem se fecha atrás de você e vira uma parede viva de pedra. O conhecimento agora importa tanto quanto a coragem, pois escapar da dungeon será sua única forma de sobreviver.`
+            ]
+        };
+
+        const storyLines = storyLinesByClass[playerClass] || storyLinesByClass.guerreiro;
+
+        let currentStep = 0;
+        const storyText = document.getElementById('storyText');
+        const nextButton = document.getElementById('nextButton');
+        const skipButton = document.getElementById('skipButton');
+        const dots = Array.from(document.querySelectorAll('.story-dot'));
+
+        function renderStep() {
+            storyText.classList.remove('visible');
+
+            window.setTimeout(() => {
+                storyText.textContent = storyLines[currentStep];
+                storyText.classList.add('visible');
+            }, 120);
+
+            dots.forEach((dot, index) => {
+                dot.classList.toggle('active', index <= currentStep);
+            });
+
+            nextButton.textContent = currentStep === storyLines.length - 1 ? 'Entrar na Dungeon' : 'Continuar';
+        }
+
+        nextButton.addEventListener('click', () => {
+            if (currentStep === storyLines.length - 1) {
+                window.location.href = '/game';
+                return;
+            }
+
+            currentStep += 1;
+            renderStep();
+        });
+
+        skipButton.addEventListener('click', () => {
+            window.location.href = '/game';
+        });
+
+        renderStep();
+    </script>
+</body>
+</html>

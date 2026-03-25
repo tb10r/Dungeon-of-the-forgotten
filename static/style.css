@@ -510,6 +510,70 @@ body.menu-page .container {
     line-height: 1.7;
 }
 
+.story-panel {
+    max-width: 760px;
+}
+
+.story-kicker {
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+.story-title {
+    margin-bottom: 16px;
+}
+
+.story-frame {
+    min-height: 220px;
+    margin: 18px 0 28px;
+    padding: 28px;
+    background: linear-gradient(180deg, rgba(76, 45, 28, 0.28) 0%, rgba(20, 12, 9, 0.48) 100%);
+    border: 1px solid var(--border-soft);
+    border-radius: 18px;
+}
+
+.story-text {
+    font-size: 1.45rem;
+    line-height: 1.8;
+    color: var(--text-main);
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+.story-text.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.story-progress {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.story-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: rgba(227, 181, 106, 0.18);
+    border: 1px solid rgba(227, 181, 106, 0.28);
+    transition: transform 0.25s ease, background 0.25s ease;
+}
+
+.story-dot.active {
+    background: var(--accent-gold);
+    transform: scale(1.1);
+}
+
+.story-actions {
+    margin-top: 0;
+}
+
 /* === TELA DE JOGO === */
 .game-screen {
     background:
@@ -808,6 +872,15 @@ body.menu-page .container {
 
     .form-actions {
         flex-direction: column;
+    }
+
+    .story-frame {
+        min-height: 260px;
+        padding: 22px;
+    }
+
+    .story-text {
+        font-size: 1.18rem;
     }
 
     .action-buttons,

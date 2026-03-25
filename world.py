@@ -268,9 +268,7 @@ class World:
         }
     def randomize_treasure_loot(self):
         """Distribui itens aleatoriamente nos baús de tesouro sem repetição"""
-        # Lista base de itens para baús
-        loot_pool = [
-            "health_potion",
+        unique_loot_pool = [
             "simple_shield",
             "iron_shield",
             "leather_armor",
@@ -278,10 +276,8 @@ class World:
             "fireball",
             "ice_shard",
             "magical_heal",
-            # Armas do Guerreiro
             "battle_axe",
             "flaming_sword",
-            # Armas Mágicas
             "crystal_orb",
             "ice_wand",
             "ancient_staff",
@@ -291,7 +287,7 @@ class World:
                 
         # Meteoro tem 33% de chance de aparecer
         if random.random() < 0.33:
-            loot_pool.append("meteor")
+            unique_loot_pool.append("meteor")
         
         # Identifica salas de tipo "treasure" (baús)
         treasure_rooms = [room_id for room_id, room in self.rooms.items() 
@@ -310,16 +306,20 @@ class World:
             key_room = rune_room = necro_rune_room = None
         
         # Distribui itens para cada baú (com reposição para não esvaziar os últimos baús)
+        available_unique_items = unique_loot_pool[:]
         for room_id in treasure_rooms:
-            # Cada baú terá apenas 2-3 itens
             room_items = []
-            items_per_chest = random.randint(2, 3)  # Entre 2 e 3 itens
-            if len(loot_pool) >= items_per_chest:
-                # Evita repetição dentro do mesmo baú quando possível
-                room_items.extend(random.sample(loot_pool, items_per_chest))
-            else:
-                # Fallback extremo: com reposição
-                room_items.extend(random.choice(loot_pool) for _ in range(items_per_chest))
+            items_per_chest = random.randint(2, 3)
+            unique_count = min(len(available_unique_items), items_per_chest)
+
+            if unique_count > 0:
+                selected_unique_items = random.sample(available_unique_items, unique_count)
+                room_items.extend(selected_unique_items)
+                for item_name in selected_unique_items:
+                    available_unique_items.remove(item_name)
+
+            while len(room_items) < items_per_chest:
+                room_items.append("health_potion")
             
             # Adiciona a chave no baú escolhido
             if room_id == key_room:
@@ -394,7 +394,12 @@ class World:
     def has_enemy(self, room_id):
         """Verifica se a sala tem um inimigo vivo"""
         room = self.get_room(room_id)
-        if not room or not room.get("enemy"):
+        if not room:
+            return False
+
+        has_single_enemy = bool(room.get("enemy"))
+        has_multi_enemy = bool(room.get("enemies"))
+        if not has_single_enemy and not has_multi_enemy:
             return False
         
         # Verifica se o inimigo já foi derrotado
@@ -419,7 +424,7 @@ class World:
             return False
         
         # Salas com inimigos só dão loot após derrotar o inimigo
-        if room.get("enemy") and room_id not in self.defeated_enemies:
+        if (room.get("enemy") or room.get("enemies")) and room_id not in self.defeated_enemies:
             return False
         
         # Verifica se o tesouro já foi coletado
@@ -452,6 +457,8 @@ class World:
         """Cria instância de inimigo baseado no tipo da sala"""
         
         enemy_type = self.get_enemy_type(room_id)
+        if isinstance(enemy_type, str):
+            enemy_type = enemy_type.lower()
         
         if enemy_type == "goblin":
             return Goblin()
@@ -478,6 +485,9 @@ class World:
     
     def create_enemy_by_name(self, enemy_name):
         """Cria instância de inimigo baseado no nome"""
+        if isinstance(enemy_name, str):
+            enemy_name = enemy_name.lower()
+
         if enemy_name == "goblin":
             return Goblin()
         elif enemy_name == "orc_chief":
@@ -505,6 +515,7 @@ class World:
         """Retorna instâncias dos itens da sala.
         source:
           - "chest": aplica filtro por classe + neutros e remove spells
+                    - "boss": aplica filtro por classe e mantém spells/recompensas especiais
           - "any": mantém comportamento antigo (sem filtro)
         """
         from items import (
@@ -552,17 +563,18 @@ class World:
         }
 
         neutral_items = {
-            "health_potion", "summoning_rune", "necromancer_rune",
+            "health_potion",
             "simple_shield", "iron_shield", "rusty_sword"
         }
         warrior_items = {
             "battle_axe", "flaming_sword", "war_hammer", "dragon_lance",
             "leather_armor", "iron_armor", "Blackwarrior_sword",
-            "Blackwarrior_armor", "butcher_spatula"
+            "Blackwarrior_armor", "butcher_spatula", "summoning_rune"
         }
         mage_items = {
             "crystal_orb", "ice_wand", "ancient_staff", "shadow_grimoire",
-            "fire_staff", "lightning_rod", "necromancer_robe"
+            "fire_staff", "lightning_rod", "necromancer_robe", "necromancer_rune",
+            "necromancer_curser"
         }
 
         allowed_names = set(items_map.keys())
@@ -572,6 +584,11 @@ class World:
                 allowed_names |= warrior_items
             elif player_class == "mago":
                 allowed_names |= mage_items
+        elif source == "boss":
+            if player_class == "guerreiro":
+                allowed_names = set(warrior_items)
+            elif player_class == "mago":
+                allowed_names = set(mage_items)
 
         items = []
         for item_name in item_names:
@@ -579,10 +596,10 @@ class World:
             if not item:
                 continue
 
-            if source == "chest":
+            if source in {"chest", "boss"}:
                 if item_name not in allowed_names:
                     continue
-                if item.item_type == "spell":
+                if source == "chest" and item.item_type == "spell":
                     continue
 
             items.append(item)

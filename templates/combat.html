@@ -488,6 +488,11 @@
             const data = await response.json();
             combatState = data;
             paCosts = data.pa_costs || {};
+
+            if (data.intro_message) {
+                addLog(`🕯️ ${data.intro_message}`);
+            }
+
             updateUI();
         }
 
@@ -572,7 +577,7 @@
             }
 
             if (data.combat_over) {
-                handleCombatEnd(data.result);
+                handleCombatEnd(data.result, data);
             } else {
                 combatState = data.combat_state;
                 updateUI();
@@ -595,7 +600,7 @@
             }
 
             if (data.combat_over) {
-                handleCombatEnd(data.result);
+                handleCombatEnd(data.result, data);
             } else {
                 combatState = data.combat_state;
                 updateUI();
@@ -618,7 +623,7 @@
             }
 
             if (data.combat_over) {
-                handleCombatEnd(data.result);
+                handleCombatEnd(data.result, data);
             } else {
                 combatState = data.combat_state;
                 updateUI();
@@ -697,8 +702,18 @@
             logContent.scrollTop = logContent.scrollHeight;
         }
 
-        function handleCombatEnd(result) {
+        function handleCombatEnd(result, payload = {}) {
             if (result === 'victory') {
+                if (payload.reward_summary) {
+                    addLog(`🏆 ${payload.reward_summary.title}`);
+                    addLog(`📜 ${payload.reward_summary.message}`);
+                    (payload.reward_summary.items || []).forEach(item => {
+                        const icon = item.type === 'spell' ? '✨' : '🎁';
+                        addLog(`${icon} ${item.name} - ${item.grant_text}`);
+                    });
+                    sessionStorage.setItem('combatRewardSummary', JSON.stringify(payload.reward_summary));
+                }
+
                 addLog('🎉 VITÓRIA!');
                 setTimeout(() => {
                     window.location.href = '/game';

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
@@ -133,6 +133,18 @@
             width: 100%;
             height: 100%;
             pointer-events: none;
+            overflow: visible;
+        }
+
+        .map-link {
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .map-junction {
+            stroke: rgba(12, 10, 16, 0.95);
+            stroke-width: 1.2;
         }
 
         .map-room {
@@ -240,6 +252,86 @@
             cursor: not-allowed;
         }
 
+        .ritual-scene {
+            position: relative;
+            overflow: hidden;
+            border-radius: 14px;
+            padding: 22px;
+            background:
+                radial-gradient(circle at top, rgba(181, 101, 61, 0.2), transparent 32%),
+                linear-gradient(180deg, rgba(35, 20, 15, 0.98) 0%, rgba(14, 8, 6, 1) 100%);
+            border: 1px solid rgba(227, 181, 106, 0.24);
+        }
+
+        .ritual-scene::before,
+        .ritual-scene::after {
+            content: '';
+            position: absolute;
+            inset: auto;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            filter: blur(14px);
+            opacity: 0.18;
+            pointer-events: none;
+        }
+
+        .ritual-scene::before {
+            top: -40px;
+            right: -20px;
+            background: rgba(227, 181, 106, 0.65);
+        }
+
+        .ritual-scene::after {
+            bottom: -50px;
+            left: -20px;
+            background: rgba(138, 79, 45, 0.7);
+        }
+
+        .ritual-subtitle {
+            color: #d7c1a0;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .ritual-boss {
+            color: #f3dcb0;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            margin-bottom: 18px;
+            text-shadow: 0 0 18px rgba(227, 181, 106, 0.28);
+        }
+
+        .ritual-lines {
+            display: grid;
+            gap: 12px;
+        }
+
+        .ritual-line {
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.55s ease, transform 0.55s ease;
+            padding: 12px 14px;
+            border-radius: 10px;
+            background: rgba(242, 228, 200, 0.04);
+            border: 1px solid rgba(227, 181, 106, 0.12);
+            color: #f2e4c8;
+            line-height: 1.6;
+        }
+
+        .ritual-line.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .ritual-actions {
+            display: flex;
+            justify-content: flex-end;
+            margin-top: 18px;
+        }
+
         @media (max-width: 768px) {
             .overlay-modal {
                 padding: 10px;
@@ -345,6 +437,9 @@
                     <button class="btn btn-action" onclick="openInventory()">
                         🎒 Inventário
                     </button>
+                    <button class="btn btn-action" onclick="saveGame()">
+                        💾 Salvar
+                    </button>
                     <button class="btn btn-action" onclick="openStatus()">
                         📊 Status
                     </button>
@@ -440,10 +535,27 @@
             <div id="statusContent" class="status-grid"></div>
         </div>
     </div>
+
+    <div id="invocationModal" class="overlay-modal">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <div id="ritualTitle" class="overlay-title">Ritual de Invocação</div>
+            </div>
+            <div class="ritual-scene">
+                <div id="ritualSubtitle" class="ritual-subtitle"></div>
+                <div id="ritualBoss" class="ritual-boss"></div>
+                <div id="ritualLines" class="ritual-lines"></div>
+                <div class="ritual-actions">
+                    <button id="ritualContinue" class="btn btn-action" onclick="enterCombatFromScene()" disabled>⚔️ Entrar em Combate</button>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <script>
         // Estado do jogo
         let gameState = null;
+        let pendingCombatRedirect = '/combat';
         
         // Carregar estado do jogo
         async function loadGameState() {
@@ -507,6 +619,7 @@
                 case 'enemy': roomTypeIcon = '⚔️ Sala com Inimigo'; break;
                 case 'treasure': roomTypeIcon = '💎 Baú de Tesouro'; break;
                 case 'boss': roomTypeIcon = '👑 Sala do Boss'; break;
+                case 'multi_enemy': roomTypeIcon = '👑 Desafio Final'; break;
                 case 'exit': roomTypeIcon = '🚪 Saída'; break;
                 default: roomTypeIcon = '🏛️ Sala Normal';
             }
@@ -514,9 +627,13 @@
             
             // Status da sala
             let statusHTML = '';
+            if (room.special_boss_locked_message) {
+                statusHTML += `<div class="status-info">🔮 ${room.special_boss_locked_message}</div>`;
+            }
             if (room.has_enemy) {
                 statusHTML += '<div class="status-warning">⚠️ Há um inimigo nesta sala!</div>';
-                statusHTML += '<button class="btn btn-action btn-combat-trigger" style="width: 100%; margin-top: 10px;" onclick="startCombat()">⚔️ Iniciar Combate</button>';
+                const combatLabel = room.special_boss_button_label || room.combat_button_label || '⚔️ Iniciar Combate';
+                statusHTML += `<button class="btn btn-action btn-combat-trigger" style="width: 100%; margin-top: 10px;" onclick="startCombat()">${combatLabel}</button>`;
             }
             if (room.has_treasure) {
                 statusHTML += '<div class="status-info">💎 Há um baú aqui!</div>';
@@ -619,8 +736,14 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    // Redireciona para tela de combate
-                    window.location.href = '/combat';
+                    pendingCombatRedirect = data.redirect_url || '/combat';
+
+                    if (data.special_intro) {
+                        showInvocationScene(data.special_intro);
+                        return;
+                    }
+
+                    window.location.href = pendingCombatRedirect;
                 } else {
                     addLog('❌ ' + data.message);
                 }
@@ -650,6 +773,9 @@
                 (data.items || []).forEach(item => {
                     addLog(`📦 ${item.name} (${item.type})`);
                 });
+                (data.skipped_items || []).forEach(item => {
+                    addLog(`⚠️ ${item.name} já estava com você e não foi duplicado.`, 'info');
+                });
 
                 await loadGameState();
             } catch (error) {
@@ -663,11 +789,53 @@
             if (el) el.classList.remove('show');
         }
 
+        function showInvocationScene(scene) {
+            const modal = document.getElementById('invocationModal');
+            const title = document.getElementById('ritualTitle');
+            const subtitle = document.getElementById('ritualSubtitle');
+            const boss = document.getElementById('ritualBoss');
+            const linesWrap = document.getElementById('ritualLines');
+            const continueButton = document.getElementById('ritualContinue');
+
+            title.textContent = scene.title || 'Ritual de Invocação';
+            subtitle.textContent = scene.subtitle || '';
+            boss.textContent = scene.boss_name || '';
+            continueButton.textContent = scene.action_label || '⚔️ Entrar em Combate';
+            continueButton.disabled = true;
+            linesWrap.innerHTML = '';
+
+            const lines = scene.lines || [];
+            let revealDelay = 220;
+
+            lines.forEach((text, index) => {
+                const line = document.createElement('div');
+                line.className = 'ritual-line';
+                line.textContent = text;
+                linesWrap.appendChild(line);
+
+                setTimeout(() => {
+                    line.classList.add('visible');
+                }, revealDelay + (index * 800));
+            });
+
+            setTimeout(() => {
+                continueButton.disabled = false;
+                continueButton.focus();
+            }, revealDelay + (lines.length * 800));
+
+            modal.classList.add('show');
+        }
+
+        function enterCombatFromScene() {
+            closeModal('invocationModal');
+            window.location.href = pendingCombatRedirect;
+        }
+
         function getItemMeta(item) {
             if (item.type === 'weapon') return `⚔️ +${item.attack_bonus || 0} ataque`;
             if (item.type === 'shield') return `🛡️ +${item.defense_bonus || 0} defesa`;
             if (item.type === 'armor') return `🛡️ +${item.defense_bonus || 0} defesa`;
-            if (item.type === 'consumable') return `🧪 Cura ${item.heal_amount || 0} HP`;
+            if (item.type === 'consumable') return `🧪 Cura ${item.heal_amount || 0} HP${item.count > 1 ? ` | x${item.count}` : ''}`;
             return `ℹ️ Tipo: ${item.type}`;
         }
 
@@ -721,8 +889,9 @@
                     data.items.forEach(item => {
                         const card = document.createElement('div');
                         card.className = 'inv-item';
+                        const itemTitle = item.count && item.count > 1 ? `${item.name} x${item.count}` : item.name;
                         card.innerHTML = `
-                            <h4>${item.name}</h4>
+                            <h4>${itemTitle}</h4>
                             <p>${item.description || 'Sem descrição'}</p>
                             <div class="inv-meta">${getItemMeta(item)}</div>
                             <button class="inv-action" ${item.action === 'info' ? 'disabled' : ''}>${getActionLabel(item)}</button>
@@ -859,6 +1028,24 @@
                 addLog('❌ Erro ao carregar status', 'error');
             }
         }
+
+        async function saveGame() {
+            try {
+                const response = await fetch('/api/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+
+                const data = await response.json();
+                addLog(data.success ? `💾 ${data.message}` : `❌ ${data.message || data.error}`, data.success ? 'info' : 'error');
+            } catch (error) {
+                console.error('Erro ao salvar jogo:', error);
+                addLog('❌ Erro ao salvar o jogo.', 'error');
+            }
+        }
         
         function iconForRoom(room) {
             if (!room.visited && !room.current) return '·';
@@ -871,6 +1058,103 @@
             return '□';
         }
 
+        function getRoomCenter(room, scale, offsetX, offsetY) {
+            return {
+                x: room.col * scale + offsetX + 17,
+                y: room.row * scale + offsetY + 17,
+            };
+        }
+
+        function getDirectionVector(direction) {
+            switch (direction) {
+                case 'norte': return { x: 0, y: -1 };
+                case 'sul': return { x: 0, y: 1 };
+                case 'leste': return { x: 1, y: 0 };
+                case 'oeste': return { x: -1, y: 0 };
+                default: return { x: 0, y: 0 };
+            }
+        }
+
+        function hasRoomBetween(rooms, source, target, axis) {
+            const sourceCenter = { row: source.row, col: source.col };
+            const targetCenter = { row: target.row, col: target.col };
+
+            return rooms.some(candidate => {
+                if (candidate.id === source.id || candidate.id === target.id) {
+                    return false;
+                }
+
+                if (axis === 'vertical') {
+                    return candidate.col === sourceCenter.col
+                        && candidate.row > Math.min(sourceCenter.row, targetCenter.row)
+                        && candidate.row < Math.max(sourceCenter.row, targetCenter.row);
+                }
+
+                return candidate.row === sourceCenter.row
+                    && candidate.col > Math.min(sourceCenter.col, targetCenter.col)
+                    && candidate.col < Math.max(sourceCenter.col, targetCenter.col);
+            });
+        }
+
+        function buildOrthogonalPath(rooms, source, target, direction, scale, offsetX, offsetY) {
+            const start = getRoomCenter(source, scale, offsetX, offsetY);
+            const end = getRoomCenter(target, scale, offsetX, offsetY);
+            const vector = getDirectionVector(direction);
+            const roomRadius = 17;
+            const lead = 16;
+            const laneOffset = (parseInt(source.id, 10) % 2 === 0 ? 1 : -1) * 24;
+            const points = [];
+
+            const startEdge = {
+                x: start.x + (vector.x * roomRadius),
+                y: start.y + (vector.y * roomRadius),
+            };
+            const startLead = {
+                x: startEdge.x + (vector.x * lead),
+                y: startEdge.y + (vector.y * lead),
+            };
+
+            points.push(startEdge, startLead);
+
+            if (direction === 'norte' || direction === 'sul') {
+                const obstructed = start.x === end.x && hasRoomBetween(rooms, source, target, 'vertical');
+                if (start.x === end.x && !obstructed) {
+                    points.push({ x: end.x, y: end.y - (vector.y * roomRadius) });
+                } else {
+                    const detourX = startLead.x + (obstructed ? laneOffset : 0);
+                    const approachY = end.y - (vector.y * (roomRadius + 10));
+                    points.push({ x: detourX, y: startLead.y });
+                    points.push({ x: detourX, y: approachY });
+                    points.push({ x: end.x, y: approachY });
+                    points.push({ x: end.x, y: end.y - (vector.y * roomRadius) });
+                }
+            } else {
+                const obstructed = start.y === end.y && hasRoomBetween(rooms, source, target, 'horizontal');
+                if (start.y === end.y && !obstructed) {
+                    points.push({ x: end.x - (vector.x * roomRadius), y: end.y });
+                } else {
+                    const detourY = startLead.y + (obstructed ? laneOffset : 0);
+                    const approachX = end.x - (vector.x * (roomRadius + 10));
+                    points.push({ x: startLead.x, y: detourY });
+                    points.push({ x: approachX, y: detourY });
+                    points.push({ x: approachX, y: end.y });
+                    points.push({ x: end.x - (vector.x * roomRadius), y: end.y });
+                }
+            }
+
+            return points;
+        }
+
+        function appendJunction(svg, point, color) {
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('cx', point.x);
+            circle.setAttribute('cy', point.y);
+            circle.setAttribute('r', '3.2');
+            circle.setAttribute('fill', color);
+            circle.setAttribute('class', 'map-junction');
+            svg.appendChild(circle);
+        }
+
         function drawMapConnections(svg, rooms, scale, offsetX, offsetY) {
             svg.innerHTML = '';
             const mapById = new Map(rooms.map(r => [r.id, r]));
@@ -881,8 +1165,8 @@
             }
 
             rooms.forEach(room => {
-                room.connections.forEach(targetId => {
-                    const target = mapById.get(targetId);
+                room.connections.forEach(connection => {
+                    const target = mapById.get(connection.target);
                     if (!target) return;
 
                     const fromDiscovered = isDiscovered(room);
@@ -891,26 +1175,29 @@
                     // Exibe conexões apenas quando há ao menos uma ponta descoberta
                     if (!fromDiscovered && !toDiscovered) return;
 
-                    const key = [room.id, targetId].sort().join('-');
+                    const key = [room.id, connection.target].sort().join('-');
                     if (drawn.has(key)) return;
                     drawn.add(key);
 
-                    const x1 = room.col * scale + offsetX + 17;
-                    const y1 = room.row * scale + offsetY + 17;
-                    const x2 = target.col * scale + offsetX + 17;
-                    const y2 = target.row * scale + offsetY + 17;
+                    const color = fromDiscovered && toDiscovered ? '#8aa5ff' : '#4b5474';
+                    const pathPoints = buildOrthogonalPath(rooms, room, target, connection.direction, scale, offsetX, offsetY);
+                    const pathData = pathPoints
+                        .map((point, index) => `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`)
+                        .join(' ');
 
-                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    line.setAttribute('x1', x1);
-                    line.setAttribute('y1', y1);
-                    line.setAttribute('x2', x2);
-                    line.setAttribute('y2', y2);
-                    line.setAttribute('stroke', fromDiscovered && toDiscovered ? '#8aa5ff' : '#4b5474');
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    line.setAttribute('d', pathData);
+                    line.setAttribute('stroke', color);
+                    line.setAttribute('class', 'map-link');
                     line.setAttribute('stroke-width', fromDiscovered && toDiscovered ? '2.6' : '1.6');
                     if (!(fromDiscovered && toDiscovered)) {
                         line.setAttribute('stroke-dasharray', '5 4');
                     }
                     svg.appendChild(line);
+
+                    if (pathPoints.length > 3) {
+                        pathPoints.slice(1, -1).forEach(point => appendJunction(svg, point, color));
+                    }
                 });
             });
         }
@@ -951,7 +1238,9 @@
 
                     node.style.left = `${room.col * scale + offsetX}px`;
                     node.style.top = `${room.row * scale + offsetY}px`;
-                    const connectionsText = (room.connections || []).join(', ') || 'Nenhuma';
+                    const connectionsText = (room.connections || [])
+                        .map(connection => `${connection.direction}: ${connection.target}`)
+                        .join(', ') || 'Nenhuma';
                     const enemyText = room.has_enemy ? 'Sim' : 'Não';
                     const treasureText = room.has_treasure ? 'Sim' : 'Não';
                     node.title = `${room.name} (${room.id})\nTipo: ${room.type}\nInimigo: ${enemyText}\nTesouro: ${treasureText}\nConexões: ${connectionsText}`;
@@ -971,11 +1260,31 @@
                 addLog('❌ Erro ao carregar mapa', 'error');
             }
         }
+
+        function consumeCombatRewardSummary() {
+            const rawSummary = sessionStorage.getItem('combatRewardSummary');
+            if (!rawSummary) return;
+
+            sessionStorage.removeItem('combatRewardSummary');
+
+            try {
+                const summary = JSON.parse(rawSummary);
+                addLog(`🏆 ${summary.title}`);
+                addLog(`📜 ${summary.message}`);
+                (summary.items || []).forEach(item => {
+                    const icon = item.type === 'spell' ? '✨' : '🎁';
+                    addLog(`${icon} ${item.name} - ${item.grant_text}`);
+                });
+            } catch (error) {
+                console.error('Erro ao ler resumo de recompensa:', error);
+            }
+        }
         
         // Inicializar ao carregar a página
         window.onload = async () => {
             addLog('🎮 Bem-vindo à aventura!');
             await loadGameState();
+            consumeCombatRewardSummary();
         };
         
         // Atualizar automaticamente a cada 5 segundos

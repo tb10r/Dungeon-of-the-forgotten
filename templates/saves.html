@@ -53,9 +53,23 @@
     </div>
     
     <script>
-        function loadSave(filename) {
-            alert('Sistema de carregamento em desenvolvimento!\nArquivo: ' + filename);
-            // TODO: Implementar carregamento de save
+        async function loadSave(filename) {
+            try {
+                const response = await fetch(`/api/load/${encodeURIComponent(filename)}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (!data.success) {
+                    alert(data.message || 'Não foi possível carregar o save.');
+                    return;
+                }
+
+                window.location.href = data.redirect_url || '/game';
+            } catch (error) {
+                console.error('Erro ao carregar save:', error);
+                alert('Erro ao carregar o save selecionado.');
+            }
         }
     </script>
     

@@ -1,5 +1,6 @@
 import json
 import os
+import copy
 from datetime import datetime
 
 class SaveManager:
@@ -21,33 +22,27 @@ class SaveManager:
         # Prepara dados do player
         player_data = {
             "name": player.name,
+            "player_class": player.player_class,
             "level": player.level,
             "xp": player.xp,
             "max_hp": player.max_hp,
             "hp": player.hp,
+            "mana": player.mana,
+            "max_mana": player.max_mana,
+            "bonus_mana": getattr(player, "bonus_mana", 0),
             "strength": player.strength,
             "vitality": player.vitality,
             "agility": player.agility,
+            "skill_points": getattr(player, "skill_points", 0),
+            "attribute_points": getattr(player, "attribute_points", 0),
+            "unlocked_skills": list(getattr(player, "unlocked_skills", [])),
+            "known_spells": [spell.name for spell in getattr(player, "known_spells", [])],
+            "max_pa": getattr(player, "max_pa", 6),
             "position": player.position,
-            "inventory": [
-                {
-                    "name": item.name,
-                    "type": item.item_type,
-                    "description": item.description,
-                    "attack_bonus": getattr(item, 'attack_bonus', None),
-                    "defense_bonus": getattr(item, 'defense_bonus', None),
-                    "heal_amount": getattr(item, 'heal_amount', None)
-                }
-                for item in player.inventory
-            ],
-            "equipped_weapon": {
-                "name": player.equipped_weapon.name,
-                "attack_bonus": player.equipped_weapon.attack_bonus
-            } if player.equipped_weapon else None,
-            "equipped_shield": {
-                "name": player.equipped_shield.name,
-                "defense_bonus": player.equipped_shield.defense_bonus
-            } if player.equipped_shield else None
+            "inventory": [item.name for item in player.inventory],
+            "equipped_weapon": player.equipped_weapon.name if player.equipped_weapon else None,
+            "equipped_shield": player.equipped_shield.name if player.equipped_shield else None,
+            "equipped_armor": player.equipped_armor.name if player.equipped_armor else None,
         }
         
         # Prepara dados do world
@@ -90,22 +85,35 @@ class SaveManager:
         try:
             with open(filepath, 'r') as f:
                 save_data = json.load(f)
+
+            item_registry = self._get_item_registry()
             
             # Reconstrói o player
             from player import Player
-            from items import rusty_sword, simple_shield, health_potion, Potion, Weapon, Shield
             
             player_data = save_data["player"]
-            player = Player(player_data["name"])
+            player = Player(player_data["name"], player_data.get("player_class", "guerreiro"))
+            player.inventory = []
+            player.equipped_weapon = None
+            player.equipped_shield = None
+            player.equipped_armor = None
+            player.known_spells = []
             
             # Restaura atributos
             player.level = player_data["level"]
             player.xp = player_data["xp"]
             player.max_hp = player_data["max_hp"]
             player.hp = player_data["hp"]
+            player.mana = player_data.get("mana", player.mana)
+            player.max_mana = player_data.get("max_mana", player.max_mana)
+            player.bonus_mana = player_data.get("bonus_mana", 0)
             player.strength = player_data["strength"]
             player.vitality = player_data["vitality"]
             player.agility = player_data["agility"]
+            player.skill_points = player_data.get("skill_points", 0)
+            player.attribute_points = player_data.get("attribute_points", 0)
+            player.unlocked_skills = list(player_data.get("unlocked_skills", []))
+            player.max_pa = player_data.get("max_pa", getattr(player, "max_pa", 6))
             player.position = player_data["position"]
             
             # Recalcula stats (em caso de mudança no cálculo)
@@ -113,42 +121,31 @@ class SaveManager:
             player.base_defense = player.calculate_defense()
             
             # Restaura inventário
-            for item_data in player_data["inventory"]:
-                if item_data["type"] == "weapon":
-                    item = Weapon(
-                        item_data["name"],
-                        item_data["attack_bonus"],
-                        item_data["description"]
-                    )
-                elif item_data["type"] == "shield":
-                    item = Shield(
-                        item_data["name"],
-                        item_data["defense_bonus"],
-                        item_data["description"]
-                    )
-                elif item_data["type"] == "consumable":
-                    item = Potion(
-                        item_data["name"],
-                        item_data["heal_amount"],
-                        item_data["description"]
-                    )
-                else:
-                    continue
-                
-                player.inventory.append(item)
+            for item_name in player_data.get("inventory", []):
+                item = item_registry.get(item_name)
+                if item:
+                    player.inventory.append(copy.deepcopy(item))
             
             # Restaura equipamentos
-            if player_data["equipped_weapon"]:
-                for item in player.inventory:
-                    if item.name == player_data["equipped_weapon"]["name"]:
-                        player.equipped_weapon = item
-                        break
-            
-            if player_data["equipped_shield"]:
-                for item in player.inventory:
-                    if item.name == player_data["equipped_shield"]["name"]:
-                        player.equipped_shield = item
-                        break
+            equipped_weapon_name = player_data.get("equipped_weapon")
+            if equipped_weapon_name and equipped_weapon_name in item_registry:
+                player.equipped_weapon = copy.deepcopy(item_registry[equipped_weapon_name])
+
+            equipped_shield_name = player_data.get("equipped_shield")
+            if equipped_shield_name and equipped_shield_name in item_registry:
+                player.equipped_shield = copy.deepcopy(item_registry[equipped_shield_name])
+
+            equipped_armor_name = player_data.get("equipped_armor")
+            if equipped_armor_name and equipped_armor_name in item_registry:
+                player.equipped_armor = copy.deepcopy(item_registry[equipped_armor_name])
+
+            for spell_name in player_data.get("known_spells", []):
+                spell = item_registry.get(spell_name)
+                if spell:
+                    player.known_spells.append(copy.deepcopy(spell))
+
+            player.max_mana = player.calculate_max_mana()
+            player.mana = min(player_data.get("mana", player.max_mana), player.max_mana)
             
             # Reconstrói o world
             from world import World
@@ -238,4 +235,16 @@ class SaveManager:
             print(f"   Nível: {save['level']}")
             print(f"   Data: {save['timestamp']}")
         
-        print(f"\n{'='*60}")            
+        print(f"\n{'='*60}")
+
+    def _get_item_registry(self):
+        """Cria um registro nome -> item base para reconstrução de saves."""
+        import items as items_module
+        from items import Item
+
+        registry = {}
+        for value in vars(items_module).values():
+            if isinstance(value, Item):
+                registry[value.name] = value
+
+        return registry

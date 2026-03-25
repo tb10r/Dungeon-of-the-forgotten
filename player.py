@@ -9,7 +9,7 @@ class Player:
         
         # Atributos primários (ajustados por classe)
         if player_class == "mago":
-            self.strength = 311          # Menos força
+            self.strength = 3         # Menos força
             self.vitality = 4          # Menos vitalidade
             self.agility = 6           # Mais agilidade
             self.magic_power = 1.5     # 50% mais dano mágico
@@ -375,6 +375,15 @@ class Player:
         else:
             print(f"\n⚠️  Você já conhece {spell.name}!")
             return False
+
+    def _has_equipped_item_named(self, item_name):
+        """Verifica se um item já está equipado."""
+        equipped_items = [self.equipped_weapon, self.equipped_shield, self.equipped_armor]
+        return any(item and item.name == item_name for item in equipped_items)
+
+    def has_item_named(self, item_name):
+        """Verifica se um item já existe no inventário ou equipado."""
+        return any(item.name == item_name for item in self.inventory) or self._has_equipped_item_named(item_name)
     
     def show_spells(self):
         """Exibe lista de magias conhecidas"""
@@ -399,8 +408,19 @@ class Player:
     
     def add_to_inventory(self, item):
         """Adiciona item ao inventário"""
-        self.inventory.append(item)
-        print(f"\n{item.name} adicionado ao inventário!")
+        import copy
+
+        stackable_types = {"consumable"}
+        should_prevent_duplicate = item.item_type not in stackable_types
+
+        if should_prevent_duplicate and self.has_item_named(item.name):
+            print(f"\n⚠️  {item.name} já está com você e não foi duplicado.")
+            return False
+
+        item_copy = copy.deepcopy(item)
+        self.inventory.append(item_copy)
+        print(f"\n{item_copy.name} adicionado ao inventário!")
+        return True
     
     def remove_from_inventory(self, item):
         """Remove item do inventário"""
@@ -476,11 +496,9 @@ class Player:
     
     def equip_weapon(self, weapon):
         """Equipa uma arma (apenas uma por vez)"""
-        import copy
-        
         # Se já tem arma equipada, devolve ao inventário
         if self.equipped_weapon:
-            self.inventory.append(copy.deepcopy(self.equipped_weapon))
+            self.add_to_inventory(self.equipped_weapon)
             print(f"\n{self.equipped_weapon.name} foi desequipada e retornou ao inventário.")
         
         # Remove a nova arma do inventário se estiver lá
@@ -493,11 +511,9 @@ class Player:
     
     def equip_shield(self, shield):
         """Equipa um escudo"""
-        import copy
-        
         # Se já tem escudo equipado, devolve ao inventário
         if self.equipped_shield:
-            self.inventory.append(copy.deepcopy(self.equipped_shield))
+            self.add_to_inventory(self.equipped_shield)
             print(f"\n{self.equipped_shield.name} foi desequipado e retornou ao inventário.")
         
         # Remove o novo escudo do inventário se estiver lá
@@ -510,12 +526,11 @@ class Player:
     
     def equip_armor(self, armor):
         """Equipa uma armadura"""
-        import copy
         old_max_mana = self.max_mana
         
         # Se já tem armadura equipada, devolve ao inventário
         if self.equipped_armor:
-            self.inventory.append(copy.deepcopy(self.equipped_armor))
+            self.add_to_inventory(self.equipped_armor)
             print(f"\n{self.equipped_armor.name} foi desequipada e retornou ao inventário.")
         
         # Remove a nova armadura do inventário se estiver lá
@@ -540,10 +555,9 @@ class Player:
     
     def unequip_weapon(self):
         """Remove a arma equipada"""
-        import copy
         if self.equipped_weapon:
             weapon = self.equipped_weapon
-            self.inventory.append(copy.deepcopy(weapon))
+            self.add_to_inventory(weapon)
             self.equipped_weapon = None
             print(f"\n{weapon.name} foi desequipada e retornou ao inventário.")
             return weapon
@@ -553,10 +567,9 @@ class Player:
     
     def unequip_shield(self):
         """Remove o escudo equipado"""
-        import copy
         if self.equipped_shield:
             shield = self.equipped_shield
-            self.inventory.append(copy.deepcopy(shield))
+            self.add_to_inventory(shield)
             self.equipped_shield = None
             print(f"\n{shield.name} foi desequipado e retornou ao inventário.")
             return shield
@@ -566,12 +579,11 @@ class Player:
     
     def unequip_armor(self):
         """Remove a armadura equipada"""
-        import copy
         if self.equipped_armor:
             armor = self.equipped_armor
             old_max_mana = self.max_mana
             
-            self.inventory.append(copy.deepcopy(armor))
+            self.add_to_inventory(armor)
             self.equipped_armor = None
             
             # Recalcula mana máxima sem o equipamento
