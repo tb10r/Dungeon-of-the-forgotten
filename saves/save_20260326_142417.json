@@ -1,0 +1,65 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-26T14:24:17.720510",
+  "player": {
+    "name": "Theo",
+    "player_class": "mago",
+    "level": 3,
+    "xp": 29,
+    "max_hp": 90,
+    "hp": 90,
+    "mana": 100,
+    "max_mana": 100,
+    "bonus_mana": 0,
+    "strength": 7,
+    "vitality": 6,
+    "agility": 6,
+    "skill_points": 0,
+    "attribute_points": 0,
+    "unlocked_skills": [
+      "m_arcane_1",
+      "m_arcane_2"
+    ],
+    "known_spells": [],
+    "max_pa": 8,
+    "position": "17",
+    "inventory": [
+      "Bastão de Raios",
+      "Escudo Simples",
+      "Varinha de Gelo",
+      "Cajado Flamejante"
+    ],
+    "equipped_weapon": "Orbe Cristalino",
+    "equipped_shield": "Escudo de Ferro",
+    "equipped_armor": "Manto do Aprendiz"
+  },
+  "world": {
+    "visited_rooms": [
+      "7",
+      "11",
+      "14",
+      "1",
+      "16",
+      "15",
+      "17",
+      "10",
+      "3",
+      "13",
+      "2",
+      "12",
+      "9"
+    ],
+    "defeated_enemies": [
+      "3",
+      "17",
+      "9"
+    ],
+    "looted_rooms": [
+      "7",
+      "15",
+      "10",
+      "3",
+      "12"
+    ]
+  }
+}

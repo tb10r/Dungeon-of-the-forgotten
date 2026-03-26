@@ -1,0 +1,45 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-26T11:41:53.942984",
+  "player": {
+    "name": "Theo",
+    "player_class": "mago",
+    "level": 2,
+    "xp": 20,
+    "max_hp": 90,
+    "hp": 90,
+    "mana": 100,
+    "max_mana": 100,
+    "bonus_mana": 0,
+    "strength": 4,
+    "vitality": 6,
+    "agility": 6,
+    "skill_points": 0,
+    "attribute_points": 0,
+    "unlocked_skills": [
+      "m_arcane_1"
+    ],
+    "known_spells": [],
+    "max_pa": 7,
+    "position": "3",
+    "inventory": [
+      "Espada Enferrujada"
+    ],
+    "equipped_weapon": "Cajado Arcano do Aprendiz",
+    "equipped_shield": null,
+    "equipped_armor": "Manto do Aprendiz"
+  },
+  "world": {
+    "visited_rooms": [
+      "1",
+      "2",
+      "3"
+    ],
+    "defeated_enemies": [
+      "3"
+    ],
+    "looted_rooms": [
+      "3"
+    ]
+  }
+}
