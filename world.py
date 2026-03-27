@@ -554,6 +554,7 @@ class World:
             "flaming_sword": flaming_sword,
             "war_hammer": war_hammer,
             "dragon_lance": dragon_lance,
+            "exit_key": exit_key,
             "crystal_orb": crystal_orb,
             "ice_wand": ice_wand,
             "ancient_staff": ancient_staff,
