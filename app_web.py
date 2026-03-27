@@ -196,6 +196,11 @@ def sanitize_save_filename(filename):
     return safe_name
 
 
+def get_current_save_filename(game_data):
+    """Retorna o nome do save atualmente vinculado ao jogo ativo."""
+    return game_data.get('save_filename')
+
+
 @app.route('/')
 def index():
     """Página inicial - Menu Principal"""
@@ -230,7 +235,8 @@ def new_game():
         # Armazena o jogo
         active_games[game_id] = {
             'player': player,
-            'world': world
+            'world': world,
+            'save_filename': None,
         }
         
         return jsonify({'success': True, 'game_id': game_id})
@@ -310,6 +316,7 @@ def get_game_state():
             'equipped_weapon': player.equipped_weapon.name if player.equipped_weapon else None,
             'equipped_armor': player.equipped_armor.name if player.equipped_armor else None,
             'equipped_shield': player.equipped_shield.name if player.equipped_shield else None,
+            'current_save_filename': get_current_save_filename(game_data),
         },
         'room': {
             'name': room['name'],
@@ -627,19 +634,24 @@ def save_current_game():
         return jsonify({'error': 'Jogo não encontrado'}), 404
 
     data = request.json or {}
-    filename = sanitize_save_filename(data.get('filename'))
-
     game_data = active_games[game_id]
+    current_save_filename = get_current_save_filename(game_data)
+    use_current = bool(data.get('use_current')) and current_save_filename
+    filename = current_save_filename if use_current else sanitize_save_filename(data.get('filename'))
+
     save_mgr = SaveManager()
     filepath = save_mgr.save_game(game_data['player'], game_data['world'], filename)
 
     if not filepath:
         return jsonify({'success': False, 'message': 'Não foi possível salvar o jogo.'})
 
+    saved_filename = os.path.basename(filepath)
+    game_data['save_filename'] = saved_filename
+
     return jsonify({
         'success': True,
-        'message': f'Jogo salvo com sucesso em {os.path.basename(filepath)}!',
-        'filename': os.path.basename(filepath),
+        'message': f'Jogo salvo com sucesso em {saved_filename}!',
+        'filename': saved_filename,
     })
 
 
@@ -658,6 +670,7 @@ def load_save_file(filename):
     active_games[game_id] = {
         'player': player,
         'world': world,
+        'save_filename': filename,
     }
 
     return jsonify({

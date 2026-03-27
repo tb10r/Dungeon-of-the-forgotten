@@ -1031,16 +1031,39 @@
 
         async function saveGame() {
             try {
+                const currentSave = gameState?.player?.current_save_filename || null;
+                let filename = null;
+                let useCurrent = false;
+
+                if (currentSave) {
+                    useCurrent = window.confirm(`Salvar por cima de ${currentSave}?\n\nOK = sobrescrever este save\nCancelar = escolher outro nome`);
+                    if (!useCurrent) {
+                        const suggestedName = currentSave.replace(/\.json$/i, '');
+                        filename = window.prompt('Digite o nome do novo save:', suggestedName);
+                        if (filename === null) {
+                            return;
+                        }
+                    }
+                } else {
+                    filename = window.prompt('Digite o nome do save.\nDeixe vazio para gerar um nome automático:', '');
+                    if (filename === null) {
+                        return;
+                    }
+                }
+
                 const response = await fetch('/api/save', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({})
+                    body: JSON.stringify({ filename, use_current: useCurrent })
                 });
 
                 const data = await response.json();
                 addLog(data.success ? `💾 ${data.message}` : `❌ ${data.message || data.error}`, data.success ? 'info' : 'error');
+                if (data.success) {
+                    await loadGameState();
+                }
             } catch (error) {
                 console.error('Erro ao salvar jogo:', error);
                 addLog('❌ Erro ao salvar o jogo.', 'error');

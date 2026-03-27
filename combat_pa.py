@@ -130,6 +130,24 @@ class CombatPA:
         cost = self.PA_COSTS.get(action_type, 2)
         self.player_pa = max(0, self.player_pa - cost)
         return cost
+
+    def get_weapon_magic_multiplier(self, caster, spell_element=None, skill_path=None):
+        """Retorna multiplicador elemental da arma equipada para magia/habilidade."""
+        weapon = getattr(caster, 'equipped_weapon', None)
+        if not weapon or getattr(weapon, 'elemental_bonus', 0) <= 0:
+            return 1.0
+
+        normalized_element = spell_element
+        if skill_path == 'arcano':
+            normalized_element = 'arcane'
+        elif skill_path in {'fogo', 'gelo'}:
+            normalized_element = 'fire' if skill_path == 'fogo' else 'ice'
+
+        if weapon.elemental_type == 'all' or weapon.elemental_type == normalized_element:
+            print(f"⚡ Bônus da {weapon.name}: +{weapon.elemental_bonus}%!")
+            return 1.0 + (weapon.elemental_bonus / 100.0)
+
+        return 1.0
     
     def calculate_damage(self, attacker_attack, defender_defense, is_critical=False, defense_modifier=1.0):
         """Calcula dano causado"""
@@ -268,6 +286,8 @@ class CombatPA:
             # Mago aplica poder mágico em habilidades
             if getattr(caster, 'player_class', None) == 'mago':
                 base_damage = int(base_damage * getattr(caster, 'magic_power', 1.0))
+
+            base_damage = int(base_damage * self.get_weapon_magic_multiplier(caster, skill_path=getattr(skill, 'path', None)))
 
             # Buff elemental por caminho da habilidade
             if getattr(skill, 'path', None) == 'fogo':

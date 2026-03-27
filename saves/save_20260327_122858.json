@@ -1,0 +1,53 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-03-27T12:28:58.657082",
+  "player": {
+    "name": "Theo",
+    "player_class": "guerreiro",
+    "level": 2,
+    "xp": 109,
+    "max_hp": 90,
+    "hp": 88,
+    "mana": 50,
+    "max_mana": 50,
+    "bonus_mana": 0,
+    "strength": 8,
+    "vitality": 6,
+    "agility": 4,
+    "skill_points": 0,
+    "attribute_points": 0,
+    "unlocked_skills": [
+      "w_berserk_1"
+    ],
+    "known_spells": [],
+    "max_pa": 7,
+    "position": "9",
+    "inventory": [
+      "Poção de Cura",
+      "Espada Enferrujada",
+      "Runa de Invocação"
+    ],
+    "equipped_weapon": "Espada Flamejante",
+    "equipped_shield": "Escudo Simples",
+    "equipped_armor": "Couro Reforçado do Guerreiro"
+  },
+  "world": {
+    "visited_rooms": [
+      "2",
+      "4",
+      "1",
+      "7",
+      "9",
+      "3"
+    ],
+    "defeated_enemies": [
+      "9",
+      "3"
+    ],
+    "looted_rooms": [
+      "3",
+      "7",
+      "4"
+    ]
+  }
+}

@@ -263,7 +263,7 @@ class World:
                 "description": "Dois guerreiros mortos-vivos empunham suas armas em posição de combate.\nSuas armaduras enferrujadas brilham fracamente à luz das tochas.",
                 "connections": {"norte": "30",},  # Ajuste as conexões conforme seu mapa
                 "enemies": ["Dragonwarrior", "Shadowmage"],  # Ou outro inimigo que preferir
-                "items": ["dragon_lance", "shadow_grimoire"]  # Machado de Batalha + Espada Flamejante
+                "items": ["dragon_lance", "shadow_grimoire", "exit_key"]
             },
         }
     def randomize_treasure_loot(self):
@@ -474,7 +474,7 @@ class World:
             return esqueleto()
         elif enemy_type == "necromancer":
             return Necromancer()
-        elif enemy_type == "prision_guard":
+        elif enemy_type in {"prision_guard", "prisionguard"}:
             return PrisionGuard()
         elif enemy_type == "shadowmage":
             return Shadowmage()
@@ -502,7 +502,7 @@ class World:
             return esqueleto()
         elif enemy_name == "necromancer":
             return Necromancer()
-        elif enemy_name == "prision_guard":
+        elif enemy_name in {"prision_guard", "prisionguard"}:
             return PrisionGuard()
         elif enemy_name == "shadowmage":
             return Shadowmage()

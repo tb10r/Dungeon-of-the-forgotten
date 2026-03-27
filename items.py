@@ -13,7 +13,7 @@ class Weapon(Item):
         super().__init__(name, "weapon", description)
         self.attack_bonus = attack_bonus
         self.elemental_bonus = elemental_bonus  # Bônus % para magias (50 = +50%)
-        self.elemental_type = elemental_type  # "fire", "ice", "lightning", "all"
+        self.elemental_type = elemental_type  # "fire", "ice", "lightning", "arcane", "all"
         self.is_magical = is_magical  # Se True, attack_bonus não vale para físico
 
 
@@ -79,6 +79,21 @@ class Spell(Item):
         self.mana_cost = mana_cost  # Custo em mana para lançar
         self.power = power  # Dano ou cura
         self.spell_type = spell_type  # "damage" ou "heal"
+
+    def _get_spell_element(self):
+        """Retorna o elemento principal da magia para bônus de arma."""
+        name_lower = self.name.lower()
+
+        if "fogo" in name_lower or "meteoro" in name_lower or "chama" in name_lower:
+            return "fire"
+        if "gelo" in name_lower or "ice" in name_lower:
+            return "ice"
+        if "raio" in name_lower or "elétrico" in name_lower or "relâmpago" in name_lower:
+            return "lightning"
+        if "arcan" in name_lower or "mágic" in name_lower or "maldição" in name_lower:
+            return "arcane"
+
+        return None
     
     def cast(self, caster, target=None):
         """Lança a magia"""
@@ -118,23 +133,19 @@ class Spell(Item):
             # Aplica bônus de poder mágico da classe também na cura
             magic_power_bonus = getattr(caster, 'magic_power', 1.0)
             heal_amount = int(self.power * magic_power_bonus)
+
+            if hasattr(caster, 'equipped_weapon') and caster.equipped_weapon:
+                weapon = caster.equipped_weapon
+                spell_element = self._get_spell_element()
+                if weapon.elemental_bonus > 0 and (weapon.elemental_type == "all" or weapon.elemental_type == spell_element):
+                    heal_amount = int(heal_amount * (1.0 + (weapon.elemental_bonus / 100.0)))
+                    print(f"⚡ Bônus da {weapon.name}: +{weapon.elemental_bonus}%!")
             
             old_hp = caster.hp
             caster.heal(heal_amount)
             healed = caster.hp - old_hp
             print(f"💚 Você curou {healed} HP! (HP: {caster.hp}/{caster.max_hp})")
             return True
-
-        def _get_spell_element(self):
-            """Retorna o elemento da magia"""
-            name_lower = self.name.lower()
-            if "fogo" in name_lower or "meteoro" in name_lower:
-                return "fire"
-            elif "gelo" in name_lower or "ice" in name_lower:
-                return "ice"
-            elif "raio" in name_lower or "elétrico" in name_lower:
-                return "lightning"
-            return None
 
         return False
         
@@ -362,11 +373,13 @@ fire_staff = Weapon(
     is_magical=True
 )
 
-lightning_rod = Weapon(
+arcane_staff = Weapon(
     name="Bastão de Raios",
     attack_bonus=1,
-    description="Bastão que amplifica magias elétricas.",
+    description="Bastão arcano que amplifica técnicas arcanas e elétricas.",
     elemental_bonus=50,
-    elemental_type="lightning",
+    elemental_type="arcane",
     is_magical=True
 )
+
+lightning_rod = arcane_staff
