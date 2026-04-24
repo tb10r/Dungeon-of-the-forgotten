@@ -101,6 +101,109 @@ def get_multi_enemy_state(world, room_id):
     }
 
 
+def serialize_player_companion(companion):
+    """Serializa um companheiro recrutado para a interface web."""
+    from companions import get_companion_unlocked_skill_names, get_companion_next_unlock
+
+    unlocked_skill_names = get_companion_unlocked_skill_names(companion)
+    next_unlock = get_companion_next_unlock(companion, companion.get('player_level', 1))
+
+    return {
+        'id': companion.get('id'),
+        'name': companion.get('name', 'Companheiro'),
+        'title': companion.get('title', ''),
+        'companion_class': companion.get('companion_class', ''),
+        'role': companion.get('role', 'apoio'),
+        'description': companion.get('description', ''),
+        'attack_min': companion.get('attack_min', 0),
+        'attack_max': companion.get('attack_max', 0),
+        'weapon_name': companion.get('weapon_name'),
+        'weapon_bonus': companion.get('weapon_bonus', 0),
+        'skills': unlocked_skill_names,
+        'next_skill_name': next_unlock.get('name') if next_unlock else None,
+        'next_unlock_level': next_unlock.get('unlock_level') if next_unlock else None,
+    }
+
+
+def get_item_registry():
+    """Retorna o registro de itens disponível para reconstrução/equipamento."""
+    return SaveManager()._get_item_registry()
+
+
+def serialize_companion_inventory_weapon(item, item_index):
+    """Serializa uma arma compatível com companions."""
+    return {
+        'index': item_index,
+        'name': item.name,
+        'description': getattr(item, 'description', ''),
+        'attack_bonus': getattr(item, 'attack_bonus', 0),
+        'companion_class': getattr(item, 'companion_class', None),
+    }
+
+
+def get_available_companion_weapons(player, companion_class):
+    """Lista as armas do inventário que podem ser equipadas por um companion."""
+    weapons = []
+    for idx, item in enumerate(player.inventory):
+        if item.item_type != 'weapon':
+            continue
+        if getattr(item, 'intended_user', 'player') != 'companion':
+            continue
+        if getattr(item, 'companion_class', None) != companion_class:
+            continue
+        weapons.append(serialize_companion_inventory_weapon(item, idx))
+
+    return weapons
+
+
+def serialize_companion_management(companion, player):
+    """Serializa companion com mini-arvore e armas disponíveis."""
+    from companions import get_companion_skill_nodes, get_companion_available_points, get_companion_next_unlock
+
+    next_unlock = get_companion_next_unlock(companion, player.level)
+    base_payload = serialize_player_companion({**companion, 'player_level': player.level})
+    base_payload.update({
+        'available_points': get_companion_available_points(companion, player.level),
+        'skill_nodes': get_companion_skill_nodes(companion, player.level),
+        'available_weapons': get_available_companion_weapons(player, companion.get('companion_class')),
+        'next_skill_name': next_unlock.get('name') if next_unlock else None,
+        'next_unlock_level': next_unlock.get('unlock_level') if next_unlock else None,
+    })
+    return base_payload
+
+
+def serialize_room_npc(room, player=None):
+    """Serializa um NPC opcional da sala para a interface web."""
+    npc = room.get('npc') if room else None
+    if not npc:
+        return None
+
+    companion_id = npc.get('companion_id')
+    if player and companion_id and player.has_companion(companion_id):
+        return None
+
+    topics = []
+    for topic in npc.get('topics', []):
+        label = topic.get('label')
+        response = topic.get('response')
+        if label and response:
+            topics.append({
+                'label': label,
+                'response': response,
+            })
+
+    return {
+        'name': npc.get('name', 'Figura Misteriosa'),
+        'title': npc.get('title', ''),
+        'intro': npc.get('intro', ''),
+        'button_label': npc.get('button_label', '💬 Conversar'),
+        'can_recruit': bool(companion_id),
+        'recruit_button_label': npc.get('recruit_button_label', '🤝 Recrutar'),
+        'companion_id': companion_id,
+        'topics': topics,
+    }
+
+
 def build_special_boss_intro(player, special_boss, enemy, room_id):
     """Monta os dados da cena de invocação para bosses especiais."""
     config = SPECIAL_BOSS_ROOMS[room_id]
@@ -255,6 +358,17 @@ def game():
     return render_template('game.html')
 
 
+@app.route('/companions')
+def companions_page():
+    """Tela de gerenciamento dos companions."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return redirect(url_for('index'))
+
+    return render_template('companions.html')
+
+
 @app.route('/intro')
 def intro():
     """Prólogo narrativo antes do início da aventura."""
@@ -278,6 +392,7 @@ def get_game_state():
     game_data = active_games[game_id]
     player = game_data['player']
     world = game_data['world']
+    player.sync_companion_progression()
 
     # Garante progresso do mapa na interface web
     world.visited_rooms.add(player.position)
@@ -285,6 +400,7 @@ def get_game_state():
     room = world.get_room(player.position)
     special_boss = get_special_boss_state(player, world, player.position)
     multi_enemy = get_multi_enemy_state(world, player.position)
+    room_npc = serialize_room_npc(room, player)
     has_enemy = world.has_enemy(player.position)
 
     if special_boss:
@@ -316,12 +432,17 @@ def get_game_state():
             'equipped_weapon': player.equipped_weapon.name if player.equipped_weapon else None,
             'equipped_armor': player.equipped_armor.name if player.equipped_armor else None,
             'equipped_shield': player.equipped_shield.name if player.equipped_shield else None,
+            'companions': [
+                serialize_player_companion({**companion, 'player_level': player.level})
+                for companion in getattr(player, 'companions', [])
+            ],
             'current_save_filename': get_current_save_filename(game_data),
         },
         'room': {
             'name': room['name'],
             'description': room['description'],
             'type': room['type'],
+            'npc': room_npc,
             'has_enemy': has_enemy,
             'has_treasure': world.has_treasure(player.position),
             'special_boss_name': special_boss['display_name'] if special_boss else None,
@@ -382,6 +503,140 @@ def collect_treasure():
     })
 
 
+@app.route('/api/npc/recruit', methods=['POST'])
+def recruit_npc_companion():
+    """Recruta o NPC da sala atual como companheiro, quando aplicável."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    game_data = active_games[game_id]
+    player = game_data['player']
+    world = game_data['world']
+    room = world.get_room(player.position)
+    npc = room.get('npc') if room else None
+
+    if not npc or not npc.get('companion_id'):
+        return jsonify({'success': False, 'message': 'Não há ninguém para libertar nesta sala.'})
+
+    companion_id = npc['companion_id']
+    if player.has_companion(companion_id):
+        return jsonify({'success': False, 'message': 'Esse aliado já luta ao seu lado.'})
+
+    recruited, companion = player.recruit_companion(companion_id)
+    if not recruited or not companion:
+        return jsonify({'success': False, 'message': 'Não foi possível recrutar esse companheiro agora.'})
+
+    message = npc.get('recruit_message') or companion.get('join_message') or f"{companion['name']} agora acompanha você."
+    return jsonify({
+        'success': True,
+        'message': message,
+        'companion': serialize_player_companion({**companion, 'player_level': player.level}),
+    })
+
+
+@app.route('/api/companions')
+def get_companions_data():
+    """Retorna dados completos dos companions recrutados."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    player = active_games[game_id]['player']
+    player.sync_companion_progression()
+
+    return jsonify({
+        'player_level': player.level,
+        'companions': [serialize_companion_management(companion, player) for companion in player.companions],
+    })
+
+
+@app.route('/api/companions/unlock_skill', methods=['POST'])
+def unlock_companion_skill_api():
+    """Desbloqueia manualmente uma skill da mini-arvore de um companion."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    data = request.json or {}
+    companion_id = data.get('companion_id')
+    skill_id = data.get('skill_id')
+
+    player = active_games[game_id]['player']
+    player.sync_companion_progression()
+
+    companion = next((comp for comp in player.companions if comp.get('id') == companion_id), None)
+    if not companion:
+        return jsonify({'success': False, 'message': 'Companion não encontrado.'})
+
+    from companions import unlock_companion_skill
+
+    success, payload = unlock_companion_skill(companion, skill_id, player.level)
+    if not success:
+        return jsonify({'success': False, 'message': payload})
+
+    return jsonify({
+        'success': True,
+        'message': f"{companion['name']} desbloqueou {payload['name']}!",
+        'companion': serialize_companion_management(companion, player),
+    })
+
+
+@app.route('/api/companions/equip_weapon', methods=['POST'])
+def equip_companion_weapon_api():
+    """Equipa uma arma específica de companion a partir do inventário do jogador."""
+    game_id = session.get('game_id')
+
+    if not game_id or game_id not in active_games:
+        return jsonify({'error': 'Jogo não encontrado'}), 404
+
+    data = request.json or {}
+    companion_id = data.get('companion_id')
+    item_index = data.get('item_index')
+
+    try:
+        item_index = int(item_index)
+    except (TypeError, ValueError):
+        return jsonify({'success': False, 'message': 'Arma inválida.'})
+
+    player = active_games[game_id]['player']
+    player.sync_companion_progression()
+
+    companion = next((comp for comp in player.companions if comp.get('id') == companion_id), None)
+    if not companion:
+        return jsonify({'success': False, 'message': 'Companion não encontrado.'})
+
+    if item_index < 0 or item_index >= len(player.inventory):
+        return jsonify({'success': False, 'message': 'Item não encontrado no inventário.'})
+
+    item = player.inventory[item_index]
+    if item.item_type != 'weapon' or getattr(item, 'intended_user', 'player') != 'companion':
+        return jsonify({'success': False, 'message': 'Esse item não pode ser equipado por companions.'})
+
+    if getattr(item, 'companion_class', None) != companion.get('companion_class'):
+        return jsonify({'success': False, 'message': 'Essa arma não pertence à classe desse companion.'})
+
+    previous_weapon_name = companion.get('weapon_item_name')
+    if previous_weapon_name:
+        previous_item = get_item_registry().get(previous_weapon_name)
+        if previous_item:
+            player.add_to_inventory(previous_item)
+
+    player.inventory.pop(item_index)
+    companion['weapon_name'] = item.name
+    companion['weapon_bonus'] = getattr(item, 'attack_bonus', 0)
+    companion['weapon_item_name'] = item.name
+
+    return jsonify({
+        'success': True,
+        'message': f"{companion['name']} equipou {item.name}.",
+        'companion': serialize_companion_management(companion, player),
+    })
+
+
 @app.route('/api/move', methods=['POST'])
 def move():
     """Move o jogador"""
@@ -402,6 +657,7 @@ def move():
     if new_room:
         player.position = new_room
         world.visited_rooms.add(new_room)
+        room_npc = serialize_room_npc(world.get_room(new_room), player)
 
         if world.is_exit(new_room):
             has_key = any(item.item_type == 'key' for item in player.inventory)
@@ -419,7 +675,11 @@ def move():
                 'event': 'locked_exit'
             })
 
-        return jsonify({'success': True, 'message': f'Você se move para {direction}'})
+        message = f'Você se move para {direction}'
+        if room_npc:
+            message += f". {room_npc['name']} parece ter algo a dizer."
+
+        return jsonify({'success': True, 'message': message})
     else:
         return jsonify({'success': False, 'message': 'Não é possível ir nessa direção!'})
 
@@ -536,7 +796,9 @@ def get_inventory():
 
         if item.item_type == 'weapon':
             item_data['attack_bonus'] = getattr(item, 'attack_bonus', 0)
-            item_data['action'] = 'equipar'
+            item_data['intended_user'] = getattr(item, 'intended_user', 'player')
+            item_data['companion_class'] = getattr(item, 'companion_class', None)
+            item_data['action'] = 'equipar' if item_data['intended_user'] == 'player' else 'info'
         elif item.item_type == 'shield':
             item_data['defense_bonus'] = getattr(item, 'defense_bonus', 0)
             item_data['action'] = 'equipar'
@@ -604,6 +866,9 @@ def inventory_action():
         return jsonify({'success': False, 'message': 'Item não encontrado'})
 
     item = player.inventory[item_index]
+
+    if item.item_type == 'weapon' and getattr(item, 'intended_user', 'player') != 'player':
+        return jsonify({'success': False, 'message': 'Essa arma foi feita para um companion, não para o herói.'})
 
     if item.item_type == 'consumable':
         success = player.use_item(item_index)
@@ -1020,22 +1285,30 @@ def combat_action():
         # Termina turno do jogador sem zerar PA (preserva PA restante)
         messages.append("⏭️ Turno terminado!")
         success = True
-        
-        # Turno do inimigo
+
+    # Ações que encerram o turno também liberam a ação automática do companheiro.
+    if action in ['attack', 'defend', 'skill', 'item', 'end_turn'] and success and not combat.is_combat_over():
+        companion_actions = combat.companion_turn()
+        for companion_action in companion_actions:
+            messages.append(companion_action['message'])
+            if companion_action.get('damage', 0) > 0:
+                messages.append(f"💥 {companion_action['name']} causou {companion_action['damage']} de dano!")
+            if companion_action.get('heal', 0) > 0:
+                messages.append(f"💚 {companion_action['name']} restaurou {companion_action['heal']} HP!")
+            if companion_action.get('effect') == 'damage_guard':
+                messages.append(f"🛡️ {companion_action['name']} reforçou sua defesa para o próximo ataque!")
+            if companion_action.get('effect') == 'damage_freeze':
+                messages.append(f"❄️ {companion_action['name']} congelou o alvo por um instante!")
+            if companion_action.get('effect') == 'damage_poison':
+                messages.append(f"☠️ {companion_action['name']} deixou veneno natural agindo no alvo!")
+
         if not combat.is_combat_over():
             combat.enemy_turn()
             messages.append(f"{combat.enemy.name} realizou suas ações!")
-            
-            # Regenera PA do jogador
+
+        if not combat.is_combat_over():
             combat.start_player_turn()
             messages.append(f"✨ Novo turno! {combat.player_pa} PA disponível")
-
-    # Regra nova: ação válida encerra turno automaticamente (exceto fuga e end_turn)
-    if action in ['attack', 'defend', 'skill', 'item'] and success and not combat.is_combat_over():
-        combat.enemy_turn()
-        messages.append(f"{combat.enemy.name} realizou suas ações!")
-        combat.start_player_turn()
-        messages.append(f"✨ Novo turno! {combat.player_pa} PA disponível")
     
     # Verifica se combate acabou
     combat_over = combat.is_combat_over()

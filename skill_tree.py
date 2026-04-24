@@ -21,6 +21,8 @@ class Skill:
         self.power = power  # Dano/Cura/Buff valor
         self.requirements = requirements or []  # IDs das skills necessárias
         self.is_passive = is_passive
+        self.effect_kind = kwargs.pop("effect_kind", None)
+        self.secondary_power = kwargs.pop("secondary_power", 0)
         self.current_cooldown = 0
 
     @property
@@ -62,6 +64,101 @@ class SkillTree:
             self._load_warrior_skills()
         elif self.player_class == "mago":
             self._load_mage_skills()
+        elif self.player_class == "druida":
+            self._load_druid_skills()
+
+    def _load_druid_skills(self):
+        """Habilidades do Druida - 3 Caminhos."""
+
+        self.skills["d_nature_1"] = Skill(
+            "d_nature_1", "Chicote de Vinhas",
+            "Golpeia o inimigo com cipós vivos, causando dano e deixando seiva tóxica na ferida.",
+            "active", tier=1, path="natureza",
+            cost_mana=18, cooldown=0, power=24
+        )
+
+        self.skills["d_nature_2"] = Skill(
+            "d_nature_2", "Seiva Renovadora",
+            "A natureza refaz suas feridas. Regenera 4% do HP máximo ao fim do turno (passiva).",
+            "passive", tier=2, path="natureza",
+            requirements=["d_nature_1"], is_passive=True, power=0.04
+        )
+
+        self.skills["d_nature_3"] = Skill(
+            "d_nature_3", "Raízes Constritoras",
+            "Raízes emergem do chão, causam dano e prendem o alvo no lugar por instantes.",
+            "active", tier=3, path="natureza",
+            cost_mana=34, cooldown=6, power=32,
+            requirements=["d_nature_2"]
+        )
+
+        self.skills["d_nature_ultimate"] = Skill(
+            "d_nature_ultimate", "IRA DA FLORESTA PRIMORDIAL",
+            "Uma onda de espinhos, galhos e seiva ancestral devasta o inimigo e o intoxica.",
+            "active", tier="ultimate", path="natureza",
+            cost_mana=60, cooldown=11, power=92,
+            requirements=["d_nature_3"]
+        )
+
+        self.skills["d_spirit_1"] = Skill(
+            "d_spirit_1", "Luar Restaurador",
+            "Invoca um brilho sereno que restaura sua vida imediatamente.",
+            "active", tier=1, path="espiritos",
+            cost_mana=18, cooldown=2, power=26, effect_kind="heal"
+        )
+
+        self.skills["d_spirit_2"] = Skill(
+            "d_spirit_2", "Ressonância Espiritual",
+            "Os ecos do véu fortalecem suas técnicas druidicas em 18% (passiva).",
+            "passive", tier=2, path="espiritos",
+            requirements=["d_spirit_1"], is_passive=True, power=0.18
+        )
+
+        self.skills["d_spirit_3"] = Skill(
+            "d_spirit_3", "Névoa Guardiã",
+            "Uma névoa espiritual fere o inimigo e cobre seu corpo com proteção ancestral.",
+            "active", tier=3, path="espiritos",
+            cost_mana=30, cooldown=6, power=24, effect_kind="damage_guard",
+            requirements=["d_spirit_2"]
+        )
+
+        self.skills["d_spirit_ultimate"] = Skill(
+            "d_spirit_ultimate", "CORTEJO DOS ANTIGOS",
+            "Espíritos antigos atravessam o alvo, causando dano e devolvendo vigor ao druida.",
+            "active", tier="ultimate", path="espiritos",
+            cost_mana=58, cooldown=12, power=78, effect_kind="damage_heal", secondary_power=30,
+            requirements=["d_spirit_3"]
+        )
+
+        self.skills["d_shape_1"] = Skill(
+            "d_shape_1", "Garras do Lobo",
+            "Canaliza o instinto predatório e desfere um ataque feroz com as mãos transfiguradas.",
+            "active", tier=1, path="metamorfose",
+            cost_mana=16, cooldown=0, power=20
+        )
+
+        self.skills["d_shape_2"] = Skill(
+            "d_shape_2", "Pele de Casca",
+            "Sua pele endurece como madeira antiga, elevando a defesa em 25% (passiva).",
+            "passive", tier=2, path="metamorfose",
+            requirements=["d_shape_1"], is_passive=True, power=0.25
+        )
+
+        self.skills["d_shape_3"] = Skill(
+            "d_shape_3", "Bote Feral",
+            "Você avança em salto bestial e rasga a defesa do inimigo com violência.",
+            "active", tier=3, path="metamorfose",
+            cost_mana=34, cooldown=5, power=36,
+            requirements=["d_shape_2"]
+        )
+
+        self.skills["d_shape_ultimate"] = Skill(
+            "d_shape_ultimate", "AVATAR DA PRESA ANCESTRAL",
+            "Assume uma forma predatória suprema e dilacera o inimigo com força esmagadora.",
+            "active", tier="ultimate", path="metamorfose",
+            cost_mana=62, cooldown=13, power=96,
+            requirements=["d_shape_3"]
+        )
     
     def _load_warrior_skills(self):
         """Habilidades do Guerreiro - 3 Caminhos"""

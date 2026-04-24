@@ -3,24 +3,35 @@ class Player:
     
     def __init__(self, name, player_class="guerreiro"):
         self.name = name
-        self.player_class = player_class  # "guerreiro" ou "mago"
+        normalized_class = (player_class or "guerreiro").strip().lower()
+        if normalized_class not in {"guerreiro", "mago", "druida"}:
+            normalized_class = "guerreiro"
+
+        self.player_class = normalized_class  # "guerreiro", "mago" ou "druida"
         self.level = 1
         self.xp = 0
         
         # Atributos primários (ajustados por classe)
-        if player_class == "mago":
-            self.strength = 3        # Menos força
+        if self.player_class == "mago":
+            self.strength = 3          # Menos força
             self.vitality = 4          # Menos vitalidade
             self.agility = 6           # Mais agilidade
             self.magic_power = 1.5     # 50% mais dano mágico
             self.melee_bonus = 0.7     # 30% menos dano corpo a corpo
-        else:  # guerreiro
+        elif self.player_class == "guerreiro":
             self.strength = 5          # Mais força
             self.vitality = 6          # Mais vitalidade
             self.agility = 4           # Menos agilidade
-            self.magic_power = 0.8     # 20% menos dano mágico
+            self.magic_power = 0.5     # 50% menos dano mágico
             self.melee_bonus = 1.3     # 30% mais dano corpo a corpo
-        
+        else:
+            self.strength = 4          # Força equilibrada
+            self.vitality = 5          # Vitalidade equilibrada
+            self.agility = 6           # Mobilidade acima da média
+            self.magic_power = 1.15    # Dano mágico moderado
+            self.melee_bonus = 1.05    # Leve vantagem física
+
+
         # Stats derivados dos atributos
         self.max_hp = self.calculate_max_hp()
         self.hp = self.max_hp
@@ -28,8 +39,10 @@ class Player:
         self.base_defense = self.calculate_defense()
         
         # Sistema de mana para magias (ajustado por classe)
-        if player_class == "mago":
+        if self.player_class == "mago":
             self.max_mana = 80  # Mago começa com mais mana
+        elif self.player_class == "druida":
+            self.max_mana = 65  # Druida começa com mana intermediária
         else:
             self.max_mana = 50  # Guerreiro tem mana padrão
 
@@ -49,6 +62,7 @@ class Player:
         self.known_spells = []  # DEPRECATED - migrar para skill_tree
         
         self.inventory = []
+        self.companions = []
         self.position = "1"
         self.equipped_weapon = None
         self.equipped_shield = None
@@ -60,6 +74,48 @@ class Player:
         # Recalcula stats com equipamentos equipados
         self.max_mana = self.calculate_max_mana()
         self.mana = self.max_mana
+
+    def has_companion(self, companion_id):
+        """Verifica se o jogador já recrutou um companheiro."""
+        return any(companion.get('id') == companion_id for companion in self.companions)
+
+    def recruit_companion(self, companion_id):
+        """Recruta um companheiro pelo ID."""
+        if self.has_companion(companion_id):
+            return False, None
+
+        from companions import build_companion
+
+        companion = build_companion(companion_id, self.level)
+        if not companion:
+            return False, None
+
+        self.companions.append(companion)
+        return True, companion
+
+    def sync_companion_progression(self):
+        """Atualiza companions com skills e progressão compatíveis com o nível atual."""
+        from companions import hydrate_companion
+
+        self.companions = [
+            hydrate_companion(companion, self.level)
+            for companion in self.companions
+            if companion
+        ]
+
+    def tick_companion_cooldowns(self):
+        """Reduz os cooldowns das skills dos companions."""
+        from companions import tick_companion_cooldowns
+
+        for companion in self.companions:
+            tick_companion_cooldowns(companion)
+
+    def get_active_companion(self):
+        """Retorna o primeiro companheiro ativo."""
+        if not self.companions:
+            return None
+
+        return self.companions[0]
     
     def _equip_starting_gear(self):
         """Equipa arma e armadura inicial baseado na classe escolhida"""
@@ -71,6 +127,12 @@ class Player:
             self.equipped_weapon = mage_staff
             self.equipped_armor = mage_robe
             # Mago começa com 2 poções no inventário (cópias independentes)
+            self.inventory.append(copy.deepcopy(health_potion))
+            self.inventory.append(copy.deepcopy(health_potion))
+        elif self.player_class == "druida":
+            from items import druid_staff, druid_armor
+            self.equipped_weapon = druid_staff
+            self.equipped_armor = druid_armor
             self.inventory.append(copy.deepcopy(health_potion))
             self.inventory.append(copy.deepcopy(health_potion))
         else:  # guerreiro
@@ -102,13 +164,17 @@ class Player:
     def calculate_max_mana(self):
         """Calcula mana máxima total incluindo bônus de equipamentos"""
         # Usa o max_mana da classe (já definido no __init__)
-        base_mana = 80 if self.player_class == "mago" else 50
+        base_mana = {
+            "guerreiro": 50,
+            "mago": 80,
+            "druida": 65,
+        }.get(self.player_class, 50)
         armor_bonus = 0
         
         if self.equipped_armor and hasattr(self.equipped_armor, 'mana_bonus'):
             armor_bonus = self.equipped_armor.mana_bonus
-        
-            return base_mana + armor_bonus + self.bonus_mana
+
+        return base_mana + armor_bonus + self.bonus_mana
     
     def roll_critical_hit(self):
         """Verifica se o ataque é crítico"""
@@ -346,6 +412,10 @@ class Player:
         self.hp += amount
         if self.hp > self.max_hp:
             self.hp = self.max_hp
+
+    def restore_hp(self, amount):
+        """Alias legado de cura usado pelo sistema de combate."""
+        self.heal(amount)
     
     def is_alive(self):
         """Verifica se o jogador está vivo"""
@@ -606,8 +676,16 @@ class Player:
     
     def show_status(self):
         """Exibe status completo do jogador"""
-        class_icon = "⚔️" if self.player_class == "guerreiro" else "🔮"
-        class_name = self.player_class.capitalize()
+        class_icon = {
+            "guerreiro": "⚔️",
+            "mago": "🔮",
+            "druida": "🌿",
+        }.get(self.player_class, "👤")
+        class_name = {
+            "guerreiro": "Guerreiro",
+            "mago": "Mago",
+            "druida": "Druida",
+        }.get(self.player_class, self.player_class.capitalize())
         
         print(f"\n{'='*40}")
         print(f"👤 {self.name} - Nível {self.level}")
@@ -631,11 +709,16 @@ class Player:
             magic_percent = int((1 - self.magic_power) * 100)
             print(f"  ⚔️  Dano Corpo a Corpo: +{melee_percent}%")
             print(f"  🔮 Dano Mágico: -{magic_percent}%")
-        else:  # mago
+        elif self.player_class == "mago":
             magic_percent = int((self.magic_power - 1) * 100)
             melee_percent = int((1 - self.melee_bonus) * 100)
             print(f"  🔮 Dano Mágico: +{magic_percent}%")
             print(f"  ⚔️  Dano Corpo a Corpo: -{melee_percent}%")
+        else:
+            magic_percent = int((self.magic_power - 1) * 100)
+            melee_percent = int((self.melee_bonus - 1) * 100)
+            print(f"  🌿 Afinidade Natural: +{magic_percent}%")
+            print(f"  ⚔️  Combate Corpo a Corpo: +{melee_percent}%")
         
         if self.equipped_weapon or self.equipped_shield or self.equipped_armor:
             print(f"\n🎒 Equipamentos:")
@@ -743,11 +826,17 @@ class Player:
                     bonuses['lifesteal'] += skill.power
                 elif "Escudo Vivo" in skill.name:
                     bonuses['hp_regen'] = skill.power * self.max_hp
+                elif "Seiva Renovadora" in skill.name:
+                    bonuses['hp_regen'] += skill.power * self.max_hp
                 elif "Maestria Arcana" in skill.name:
                     bonuses['mana_cost_reduction'] = skill.power
                     bonuses['arcane_damage_multiplier'] += skill.power
                 elif "Combustão Interna" in skill.name:
                     bonuses['fire_damage_multiplier'] += skill.power
+                elif "Ressonância Espiritual" in skill.name:
+                    bonuses['damage_multiplier'] += skill.power
+                elif "Pele de Casca" in skill.name:
+                    bonuses['defense_multiplier'] += skill.power
         
         return bonuses
     
@@ -763,9 +852,17 @@ class Player:
         if self.player_class == "guerreiro":
             paths = ["tanque", "dps", "berserker"]
             path_names = {"tanque": "TANQUE 🛡️", "dps": "DPS ⚔️", "berserker": "BERSERKER 🔥"}
-        else:
+        elif self.player_class == "mago":
             paths = ["fogo", "gelo", "arcano"]
             path_names = {"fogo": "FOGO 🔥", "gelo": "GELO ❄️", "arcano": "ARCANO ✨"}
+        else:
+            paths = ["natureza", "espiritos", "metamorfose"]
+            path_names = {"natureza": "NATUREZA 🌿", "espiritos": "ESPÍRITOS 🌙", "metamorfose": "METAMORFOSE 🐺"}
+
+        if not self.skill_tree.skills:
+            print("As habilidades do Druida ainda serão definidas.")
+            print(f"{'='*40}")
+            return
         
         for path in paths:
             print(f"\n═══ {path_names[path]} ═══")

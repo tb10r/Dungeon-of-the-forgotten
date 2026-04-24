@@ -9,12 +9,32 @@ class Item:
 class Weapon(Item):
     """Armas que aumentam ataque"""
     
-    def __init__(self, name, attack_bonus, description, elemental_bonus=0, elemental_type=None, is_magical=False):
+    def __init__(self, name, attack_bonus, description, elemental_bonus=0, elemental_type=None, is_magical=False, intended_user="player", companion_class=None):
         super().__init__(name, "weapon", description)
         self.attack_bonus = attack_bonus
         self.elemental_bonus = elemental_bonus  # Bônus % para magias (50 = +50%)
         self.elemental_type = elemental_type  # "fire", "ice", "lightning", "arcane", "all"
         self.is_magical = is_magical  # Se True, attack_bonus não vale para físico
+        self.intended_user = intended_user
+        self.companion_class = companion_class
+
+
+class DruidWeapon(Weapon):
+    """Armas druídicas com afinidade natural para futuras interações da classe."""
+
+    def __init__(self, name, attack_bonus, description, nature_bonus=0, elemental_bonus=0, elemental_type="all", is_magical=False, intended_user="player", companion_class=None):
+        super().__init__(
+            name,
+            attack_bonus,
+            description,
+            elemental_bonus=elemental_bonus,
+            elemental_type=elemental_type,
+            is_magical=is_magical,
+            intended_user=intended_user,
+            companion_class=companion_class,
+        )
+        self.nature_bonus = nature_bonus
+        self.weapon_school = "druidic"
 
 
 class Shield(Item):
@@ -240,6 +260,91 @@ mage_robe = Armor(
     defense_bonus=2,
     description="Manto leve imbuído com encantamentos de proteção básica e amplificação mágica.",
     mana_bonus=20
+)
+
+druid_staff = DruidWeapon(
+    name="Bastão Rústico do Druida",
+    attack_bonus=3,
+    description="Um bastão de carvalho vivo gravado com runas antigas. Equilibra impacto físico e ressonância natural.",
+    nature_bonus=15,
+    elemental_bonus=10,
+    elemental_type="all",
+)
+
+thorn_sickle = DruidWeapon(
+    name="Foice de Espinhos",
+    attack_bonus=5,
+    description="Uma foice leve coberta por espinhos petrificados, preferida por druidas que lutam de perto.",
+    nature_bonus=20,
+    elemental_bonus=15,
+    elemental_type="all",
+)
+
+druid_armor = Armor(
+    name="Manto de Casca Viva",
+    defense_bonus=3,
+    description="Vestes trançadas com couro, fibras e casca encantada. Protege sem sufocar o fluxo natural.",
+    mana_bonus=15
+)
+
+moonbranch_crook = DruidWeapon(
+    name="Cajado do Galho Lunar",
+    attack_bonus=2,
+    description="Um cajado curvado sob luz prateada, excelente para rituais e magias naturais.",
+    nature_bonus=25,
+    elemental_bonus=30,
+    elemental_type="all",
+    is_magical=True
+)
+
+root_spear = DruidWeapon(
+    name="Lança de Raiz Retorcida",
+    attack_bonus=6,
+    description="Uma lança moldada de raiz endurecida, usada por druidas que preferem manter distância sem abandonar o corpo a corpo.",
+    nature_bonus=10,
+    elemental_bonus=10,
+    elemental_type="all"
+)
+
+bark_mail = Armor(
+    name="Couraça de Casca Ancestral",
+    defense_bonus=5,
+    description="Camadas de casca petrificada e fibras vivas formam uma defesa resistente, mas ainda flexível.",
+    mana_bonus=10
+)
+
+moonweave_cloak = Armor(
+    name="Manto do Orvalho Lunar",
+    defense_bonus=3,
+    description="Tecido ritual banhado por orvalho encantado, leve e receptivo à magia natural.",
+    mana_bonus=25
+)
+
+warden_blade = Weapon(
+    name="Lâmina do Vigia Partido",
+    attack_bonus=4,
+    description="Espada curta recuperada de um posto em ruínas, ideal para um guardião veterano voltar ao front.",
+    intended_user="companion",
+    companion_class="guerreiro"
+)
+
+ember_focus = Weapon(
+    name="Foco de Brasa Fria",
+    attack_bonus=4,
+    description="Catalisador arcano feito para condensar projéteis e explosões rápidas nas mãos de uma maga de apoio.",
+    intended_user="companion",
+    companion_class="mago"
+)
+
+grove_totem = DruidWeapon(
+    name="Totem da Clareira Viva",
+    attack_bonus=4,
+    description="Totem de madeira viva e resina dourada, usado por druidas que lutam ao lado de aliados em vez de sozinhos.",
+    nature_bonus=25,
+    elemental_bonus=20,
+    elemental_type="all",
+    intended_user="companion",
+    companion_class="druida"
 )
 
 Blackwarrior_sword = Weapon(

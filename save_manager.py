@@ -40,6 +40,7 @@ class SaveManager:
             "max_pa": getattr(player, "max_pa", 6),
             "position": player.position,
             "inventory": [item.name for item in player.inventory],
+            "companions": copy.deepcopy(getattr(player, "companions", [])),
             "equipped_weapon": player.equipped_weapon.name if player.equipped_weapon else None,
             "equipped_shield": player.equipped_shield.name if player.equipped_shield else None,
             "equipped_armor": player.equipped_armor.name if player.equipped_armor else None,
@@ -94,6 +95,7 @@ class SaveManager:
             player_data = save_data["player"]
             player = Player(player_data["name"], player_data.get("player_class", "guerreiro"))
             player.inventory = []
+            player.companions = []
             player.equipped_weapon = None
             player.equipped_shield = None
             player.equipped_armor = None
@@ -115,6 +117,12 @@ class SaveManager:
             player.unlocked_skills = list(player_data.get("unlocked_skills", []))
             player.max_pa = player_data.get("max_pa", getattr(player, "max_pa", 6))
             player.position = player_data["position"]
+            from companions import hydrate_companion
+            player.companions = [
+                hydrate_companion(companion, player.level)
+                for companion in player_data.get("companions", [])
+                if companion
+            ]
             
             # Recalcula stats (em caso de mudança no cálculo)
             player.base_attack = player.calculate_attack()

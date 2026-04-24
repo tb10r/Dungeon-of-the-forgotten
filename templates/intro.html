@@ -19,7 +19,7 @@
         <div class="menu-container story-panel" id="storyPanel" data-player-name="{{ player_name }}" data-player-class="{{ player_class }}">
             <p class="story-kicker">Prólogo</p>
             <h1 class="game-title story-title">{{ player_name }}, sua descida começa agora</h1>
-            <p class="game-subtitle">{{ 'Guerreiro' if player_class == 'guerreiro' else 'Mago' }} dos Reinos Esquecidos</p>
+            <p class="game-subtitle">{{ {'guerreiro': 'Guerreiro', 'mago': 'Mago', 'druida': 'Druida'}.get(player_class, 'Aventureiro') }} dos Reinos Esquecidos</p>
 
             <div class="story-frame">
                 <p id="storyText" class="story-text"></p>
@@ -52,6 +52,11 @@
                 `${playerName}, estudioso das artes arcanas, encontra a Masmorra dos Esquecidos após seguir rumores sobre magia proibida enterrada sob ruínas esquecidas pelo tempo.`,
                 `A curiosidade vence o medo. Com os sentidos atentos ao fluxo arcano no ar, você atravessa a entrada sombria decidido a descobrir que segredos foram selados naquele lugar.`,
                 `Então a passagem se fecha atrás de você e vira uma parede viva de pedra. O conhecimento agora importa tanto quanto a coragem, pois escapar da dungeon será sua única forma de sobreviver.`
+            ],
+            druida: [
+                `${playerName}, guardião de ritos antigos e sinais da floresta, chega às ruínas seguindo o chamado inquieto de raízes, névoa e espíritos feridos sob a pedra.`,
+                `Ao tocar os blocos cobertos de musgo, você sente que a dungeon interrompeu um ciclo natural e decide descer para entender o que foi corrompido em suas profundezas.`,
+                `Quando a entrada se fecha atrás de você, a jornada deixa de ser apenas curiosidade. Agora será preciso restaurar o equilíbrio e encontrar a saída antes que a corrupção o consuma.`
             ]
         };
 

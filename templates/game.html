@@ -434,6 +434,9 @@
                     <button class="btn btn-action" onclick="window.location.href='/skills'">
                         🌟 Habilidades
                     </button>
+                    <button class="btn btn-action" onclick="window.location.href='/companions'">
+                        🤝 Companions
+                    </button>
                     <button class="btn btn-action" onclick="openInventory()">
                         🎒 Inventário
                     </button>
@@ -478,6 +481,19 @@
                             <div class="slot-info">
                                 <span class="slot-label">Armadura:</span>
                                 <span id="equippedArmor" class="slot-value">Nenhuma</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="equipment-panel">
+                    <h3>🤝 Companheiros</h3>
+                    <div id="companionPanel" class="equipment-slots">
+                        <div class="equipment-slot">
+                            <span class="slot-icon">•</span>
+                            <div class="slot-info">
+                                <span class="slot-label">Equipe:</span>
+                                <span class="slot-value">Nenhum companheiro recrutado</span>
                             </div>
                         </div>
                     </div>
@@ -551,6 +567,22 @@
             </div>
         </div>
     </div>
+
+    <div id="npcModal" class="overlay-modal">
+        <div class="overlay-content">
+            <div class="overlay-header">
+                <div id="npcTitle" class="overlay-title">Figura Misteriosa</div>
+                <button class="overlay-close" onclick="closeNpcDialogue()">Fechar</button>
+            </div>
+            <div class="ritual-scene">
+                <div id="npcSubtitle" class="ritual-subtitle"></div>
+                <div id="npcGreeting" class="room-description" style="margin: 0;"></div>
+                <div id="npcTopics" class="ritual-actions" style="flex-direction: column; align-items: stretch; gap: 10px;"></div>
+                <div id="npcRecruitWrap" class="ritual-actions"></div>
+                <div id="npcResponse" class="status-info" style="margin-top: 16px;"></div>
+            </div>
+        </div>
+    </div>
     
     <script>
         // Estado do jogo
@@ -585,8 +617,12 @@
             
             // Atualizar informações do jogador
             document.getElementById('playerName').textContent = player.name;
-            document.getElementById('playerClass').textContent = 
-                player.class === 'guerreiro' ? '⚔️ Guerreiro' : '🔮 Mago';
+            const classLabels = {
+                guerreiro: '⚔️ Guerreiro',
+                mago: '🔮 Mago',
+                druida: '🌿 Druida',
+            };
+            document.getElementById('playerClass').textContent = classLabels[player.class] || '👤 Aventureiro';
             document.getElementById('playerLevel').textContent = `Nível ${player.level}`;
             
             // Atualizar skill points
@@ -608,6 +644,31 @@
             document.getElementById('equippedWeapon').textContent = player.equipped_weapon || 'Nenhuma';
             document.getElementById('equippedShield').textContent = player.equipped_shield || 'Nenhum';
             document.getElementById('equippedArmor').textContent = player.equipped_armor || 'Nenhuma';
+
+            const companionPanel = document.getElementById('companionPanel');
+            if (player.companions && player.companions.length > 0) {
+                companionPanel.innerHTML = player.companions.map(companion => `
+                    <div class="equipment-slot">
+                        <span class="slot-icon">🤝</span>
+                        <div class="slot-info">
+                            <span class="slot-label">${companion.name}</span>
+                            <span class="slot-value">${companion.companion_class || 'aliado'} | ${companion.role} | ${companion.attack_min}-${companion.attack_max} dano${companion.weapon_name ? ` | arma ${companion.weapon_name}` : ''}</span>
+                            <span class="slot-value">Skills: ${(companion.skills && companion.skills.length > 0) ? companion.skills.join(', ') : 'nenhuma ainda'}</span>
+                            <span class="slot-value">${companion.next_skill_name ? `Próxima no nível ${companion.next_unlock_level}: ${companion.next_skill_name}` : 'Mini-árvore completa'}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                companionPanel.innerHTML = `
+                    <div class="equipment-slot">
+                        <span class="slot-icon">•</span>
+                        <div class="slot-info">
+                            <span class="slot-label">Equipe:</span>
+                            <span class="slot-value">Nenhum companheiro recrutado</span>
+                        </div>
+                    </div>
+                `;
+            }
             
             // Atualizar sala
             document.getElementById('roomName').textContent = room.name;
@@ -629,6 +690,10 @@
             let statusHTML = '';
             if (room.special_boss_locked_message) {
                 statusHTML += `<div class="status-info">🔮 ${room.special_boss_locked_message}</div>`;
+            }
+            if (room.npc) {
+                statusHTML += `<div class="status-info">👤 ${room.npc.name} aguarda em silêncio, como se já soubesse o que você veio buscar.</div>`;
+                statusHTML += `<button class="btn btn-action" style="width: 100%; margin-top: 10px;" onclick="openNpcDialogue()">${room.npc.button_label || '💬 Conversar'}</button>`;
             }
             if (room.has_enemy) {
                 statusHTML += '<div class="status-warning">⚠️ Há um inimigo nesta sala!</div>';
@@ -787,6 +852,77 @@
         function closeModal(modalId) {
             const el = document.getElementById(modalId);
             if (el) el.classList.remove('show');
+        }
+
+        function openNpcDialogue() {
+            const npc = gameState?.room?.npc;
+            if (!npc) {
+                addLog('❌ Não há ninguém aqui para conversar.', 'error');
+                return;
+            }
+
+            document.getElementById('npcTitle').textContent = npc.name || 'Figura Misteriosa';
+            document.getElementById('npcSubtitle').textContent = npc.title || '';
+            document.getElementById('npcGreeting').textContent = npc.intro || '';
+
+            const topicsWrap = document.getElementById('npcTopics');
+            const recruitWrap = document.getElementById('npcRecruitWrap');
+            const responseBox = document.getElementById('npcResponse');
+            topicsWrap.innerHTML = '';
+            recruitWrap.innerHTML = '';
+            responseBox.textContent = 'Escolha um assunto.';
+
+            (npc.topics || []).forEach(topic => {
+                const button = document.createElement('button');
+                button.className = 'btn btn-action';
+                button.textContent = topic.label;
+                button.onclick = () => {
+                    responseBox.textContent = topic.response;
+                    addLog(`💬 ${npc.name}: ${topic.response}`);
+                };
+                topicsWrap.appendChild(button);
+            });
+
+            if (npc.can_recruit) {
+                const recruitButton = document.createElement('button');
+                recruitButton.className = 'btn btn-action';
+                recruitButton.textContent = npc.recruit_button_label || '🤝 Recrutar';
+                recruitButton.onclick = () => recruitNpcCompanion();
+                recruitWrap.appendChild(recruitButton);
+            }
+
+            document.getElementById('npcModal').classList.add('show');
+        }
+
+        async function recruitNpcCompanion() {
+            try {
+                const response = await fetch('/api/npc/recruit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                if (!data.success) {
+                    addLog(`❌ ${data.message}`, 'error');
+                    return;
+                }
+
+                addLog(`🤝 ${data.message}`);
+                closeNpcDialogue();
+                await loadGameState();
+            } catch (error) {
+                console.error('Erro ao recrutar companheiro:', error);
+                addLog('❌ Erro ao libertar o NPC.', 'error');
+            }
+        }
+
+        function closeNpcDialogue() {
+            document.getElementById('npcTopics').innerHTML = '';
+            document.getElementById('npcRecruitWrap').innerHTML = '';
+            document.getElementById('npcResponse').textContent = '';
+            closeModal('npcModal');
         }
 
         function showInvocationScene(scene) {

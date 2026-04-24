@@ -93,7 +93,26 @@ class World:
                 "description": "Prateleiras altas repletas de livros empoeirados e ilegíveis.\nTeias de aranha cobrem cada canto.",
                 "connections": { "leste": "11"},
                 "enemy": None,
-                "items": []
+                "items": [],
+                "npc": {
+                    "name": "Lyra Cinzaviva",
+                    "title": "A maga enclausurada",
+                    "intro": "Entre estantes partidas, uma maga de olhos cansados segura um foco arcano lascado. Ela mede seus passos antes de confiar na sua presença.",
+                    "button_label": "💬 Falar com Lyra",
+                    "companion_id": "mage_companion",
+                    "recruit_button_label": "🔮 Convidar Lyra para a equipe",
+                    "recruit_message": "Lyra abandona o esconderijo entre as estantes e decide seguir com você, transformando a fuga em contra-ataque.",
+                    "topics": [
+                        {
+                            "label": "Perguntar como ela sobreviveu",
+                            "response": "Livros queimam, pergaminhos apodrecem, mas uma mente faminta aprende a sobreviver com migalhas de magia."
+                        },
+                        {
+                            "label": "Perguntar por que ela quer lutar",
+                            "response": "Porque a dungeon já tomou demais. Se eu sair daqui, não será escondida entre poeira."
+                        }
+                    ]
+                }
             },
             "11": {
                 "name": "Poço das Sombras",
@@ -109,7 +128,26 @@ class World:
                 "description": "Estátuas de pedra que um dia foram plantas cercam um baú ornamentado.\nA atmosfera é estranhamente pacífica.",
                 "connections": {"norte": "11", "leste": "13"},
                 "enemy": None,
-                "items": []
+                "items": [],
+                "npc": {
+                    "name": "Eira Folhaviva",
+                    "title": "A druida sitiada pelo silêncio",
+                    "intro": "Entre raízes petrificadas, uma druida mantém a mão sobre o solo como se ainda pudesse ouvir vida debaixo da pedra. Quando você se aproxima, ela abre os olhos devagar.",
+                    "button_label": "💬 Falar com Eira",
+                    "companion_id": "druid_companion",
+                    "recruit_button_label": "🌿 Chamar Eira para a equipe",
+                    "recruit_message": "Eira se levanta do círculo de raízes petrificadas e decide caminhar com você para restaurar o que ainda puder ser salvo.",
+                    "topics": [
+                        {
+                            "label": "Perguntar o que aconteceu ao jardim",
+                            "response": "A vida foi interrompida, não morta. A pedra aqui é só uma pausa longa demais no ciclo natural."
+                        },
+                        {
+                            "label": "Perguntar por que ela ficou",
+                            "response": "Porque alguém precisava lembrar que mesmo a dungeon já foi tocada por chuva, semente e lua."
+                        }
+                    ]
+                }
             },
             "13": {
                 "name": "Salão de Cristais",
@@ -141,7 +179,23 @@ class World:
                 "description": "Uma passagem tão estreita que você precisa andar de lado.\nO ar está abafado e quente.",
                 "connections": {"norte": "15", "sul": "17", "oeste": "18"},
                 "enemy": None,
-                "items": []
+                "items": [],
+                "npc": {
+                    "name": "Irmão Ferromorto",
+                    "title": "O cronista acorrentado",
+                    "intro": "Um monge espectral preso por correntes de ferro ergue o rosto quando você se aproxima. A voz dele soa como metal arrastando na pedra.",
+                    "button_label": "💬 Ouvir o cronista",
+                    "topics": [
+                        {
+                            "label": "Perguntar sobre o Ferreiro Negro",
+                            "response": "O Ferreiro Negro forjou aço com luto e juramento. Dizem que cada golpe do martelo dele ainda ecoa no altar, vestindo o Blackwarrior com uma armadura que não conhece descanso."
+                        },
+                        {
+                            "label": "Perguntar sobre o Necromante",
+                            "response": "O Necromante não teme a morte porque já deixou de ser um homem. Na cripta profanada, ele escuta runas como outros escutam sinos, e responde com ossos, névoa e maldição."
+                        }
+                    ]
+                }
             },
             "17": {
                 "name": "Caverna de Estalactites",
@@ -213,7 +267,26 @@ class World:
                 "description": "Instrumentos astronômicos antigos cobertos de ferrugem.\nUm baú celestial jaz no centro.",
                 "connections": {"oeste": "24"},
                 "enemy": None,
-                "items": []
+                "items": [],
+                "npc": {
+                    "name": "Alden Escudo-Partido",
+                    "title": "O guerreiro sitiado",
+                    "intro": "Um guarda veterano repousa perto do telescópio tombado, o escudo rachado apoiado no joelho. Ao notar você, ele se força a ficar de pé.",
+                    "button_label": "💬 Falar com Alden",
+                    "companion_id": "warrior_companion",
+                    "recruit_button_label": "⚔️ Chamar Alden para a equipe",
+                    "recruit_message": "Alden aperta as correias do escudo rachado e aceita voltar ao combate, desta vez ao seu lado.",
+                    "topics": [
+                        {
+                            "label": "Perguntar por quanto tempo ele resistiu",
+                            "response": "Tempo demais para contar. Quando o ferro enferruja, a memória vira a única muralha que resta."
+                        },
+                        {
+                            "label": "Perguntar o que ele viu aqui",
+                            "response": "Vi o céu por esta cúpula antes dela cair. Depois disso, só restou pedra, eco e disciplina."
+                        }
+                    ]
+                }
             },
             "26": {
                 "name": "Ponte de Pedra",
@@ -283,6 +356,15 @@ class World:
             "ancient_staff",
             "fire_staff",
             "lightning_rod",
+            "druid_staff",
+            "thorn_sickle",
+            "moonbranch_crook",
+            "root_spear",
+            "bark_mail",
+            "moonweave_cloak",
+            "warden_blade",
+            "ember_focus",
+            "grove_totem",
         ]
                 
         # Meteoro tem 33% de chance de aparecer
@@ -523,7 +605,9 @@ class World:
             iron_shield, leather_armor, iron_armor, necromancer_robe, Blackwarrior_sword, Blackwarrior_armor,
             butcher_spatula, fireball, lightning_bolt, ice_shard, magical_heal, meteor, necromancer_curser,
             battle_axe, flaming_sword, war_hammer, dragon_lance, crystal_orb, ice_wand, ancient_staff,
-            shadow_grimoire, fire_staff, lightning_rod
+            shadow_grimoire, fire_staff, lightning_rod, druid_staff, thorn_sickle, moonbranch_crook,
+            root_spear, druid_armor, bark_mail, moonweave_cloak, warden_blade, ember_focus,
+            grove_totem
         )
 
         item_names = self.get_treasure(room_id)
@@ -561,11 +645,24 @@ class World:
             "shadow_grimoire": shadow_grimoire,
             "fire_staff": fire_staff,
             "lightning_rod": lightning_rod,
+            "druid_staff": druid_staff,
+            "thorn_sickle": thorn_sickle,
+            "moonbranch_crook": moonbranch_crook,
+            "root_spear": root_spear,
+            "druid_armor": druid_armor,
+            "bark_mail": bark_mail,
+            "moonweave_cloak": moonweave_cloak,
+            "warden_blade": warden_blade,
+            "ember_focus": ember_focus,
+            "grove_totem": grove_totem,
         }
 
         neutral_items = {
             "health_potion",
             "simple_shield", "iron_shield", "rusty_sword", "exit_key"
+        }
+        companion_items = {
+            "warden_blade", "ember_focus", "grove_totem"
         }
         warrior_items = {
             "battle_axe", "flaming_sword", "war_hammer", "dragon_lance",
@@ -577,19 +674,29 @@ class World:
             "fire_staff", "lightning_rod", "necromancer_robe", "necromancer_rune",
             "necromancer_curser"
         }
+        druid_items = {
+            "druid_staff", "thorn_sickle", "moonbranch_crook", "root_spear",
+            "druid_armor", "bark_mail", "moonweave_cloak"
+        }
+
+        normalized_class = (player_class or "").lower()
 
         allowed_names = set(items_map.keys())
         if source == "chest":
-            allowed_names = set(neutral_items)
-            if player_class == "guerreiro":
+            allowed_names = set(neutral_items) | companion_items
+            if normalized_class == "guerreiro":
                 allowed_names |= warrior_items
-            elif player_class == "mago":
+            elif normalized_class == "mago":
                 allowed_names |= mage_items
+            elif normalized_class == "druida":
+                allowed_names |= druid_items
         elif source == "boss":
-            if player_class == "guerreiro":
+            if normalized_class == "guerreiro":
                 allowed_names = set(warrior_items)
-            elif player_class == "mago":
+            elif normalized_class == "mago":
                 allowed_names = set(mage_items)
+            elif normalized_class == "druida":
+                allowed_names = set(druid_items)
 
         items = []
         for item_name in item_names:
@@ -612,9 +719,22 @@ class World:
 
         # Garantia: baú nunca vazio após filtro de classe
         if source == "chest" and not items:
-            fallback_item = items_map.get("health_potion")
-            if fallback_item:
-                items.append(fallback_item)
+            class_priority = {
+                "guerreiro": ["battle_axe", "iron_armor"],
+                "mago": ["crystal_orb", "ancient_staff"],
+                "druida": ["thorn_sickle", "moonbranch_crook", "bark_mail", "moonweave_cloak"],
+            }
+
+            for fallback_name in class_priority.get(normalized_class, []):
+                fallback_item = items_map.get(fallback_name)
+                if fallback_item:
+                    items.append(fallback_item)
+                    break
+
+            if not items:
+                fallback_item = items_map.get("health_potion")
+                if fallback_item:
+                    items.append(fallback_item)
 
         return items
 
@@ -803,7 +923,7 @@ class World:
                     heal = 15
                     player.heal(heal)
                     player.restore_mana(10)
-                    print(f"💚 Você recupera {heal} HP e 10 mana entre combates!")
+                    print(f"💚 Você recupera {heal} HP entre combates!")
                     input("\n[Pressione Enter para o próximo combate]")
             
             if all_defeated:

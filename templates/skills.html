@@ -439,6 +439,11 @@
                 'fogo': { name: '🔥 FOGO', icon: '🔥' },
                 'gelo': { name: '❄️ GELO', icon: '❄️' },
                 'arcano': { name: '✨ ARCANO', icon: '✨' }
+            },
+            'druida': {
+                'natureza': { name: '🌿 NATUREZA', icon: '🌿' },
+                'espiritos': { name: '🌙 ESPÍRITOS', icon: '🌙' },
+                'metamorfose': { name: '🐺 METAMORFOSE', icon: '🐺' }
             }
         };
 
@@ -468,6 +473,11 @@
             container.innerHTML = '';
             
             const paths = Object.keys(skillsData);
+
+            if (paths.length === 0) {
+                container.innerHTML = '<div class="path-header">As habilidades do Druida ainda serão definidas.</div>';
+                return;
+            }
             
             paths.forEach(pathKey => {
                 const pathDiv = document.createElement('div');
@@ -476,7 +486,9 @@
                 // Header do caminho
                 const header = document.createElement('div');
                 header.className = 'path-header';
-                header.textContent = pathNames[playerClass][pathKey].name;
+                header.textContent = (pathNames[playerClass] && pathNames[playerClass][pathKey])
+                    ? pathNames[playerClass][pathKey].name
+                    : pathKey.toUpperCase();
                 pathDiv.appendChild(header);
                 
                 // Ordenar skills por tier

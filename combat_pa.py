@@ -70,6 +70,8 @@ class CombatPA:
         
         # Tick nos cooldowns das skills
         self.player.tick_skill_cooldowns()
+        if hasattr(self.player, 'tick_companion_cooldowns'):
+            self.player.tick_companion_cooldowns()
         
         # Aplicar status effects
         self.apply_status_effects(self.player, self.player_status)
@@ -352,25 +354,33 @@ class CombatPA:
         skill_id = getattr(skill, 'skill_id', '')
         skill_name_lower = skill.name.lower()
         bonuses = caster.get_passive_bonuses()
+        effect_kind = getattr(skill, 'effect_kind', None)
 
         warrior_skill_damage = self.apply_warrior_skill_damage(skill, caster, target, bonuses)
         if warrior_skill_damage is not None:
             damage = warrior_skill_damage
         
         # Habilidades de dano
-        if skill.power > 0 and warrior_skill_damage is None:
+        if skill.power > 0 and warrior_skill_damage is None and effect_kind != 'heal':
             base_damage = int(skill.power * bonuses['damage_multiplier'])
+            skill_path = getattr(skill, 'path', None)
+            player_class = getattr(caster, 'player_class', None)
 
             # Mago aplica poder mágico em habilidades
-            if getattr(caster, 'player_class', None) == 'mago':
+            if player_class == 'mago':
                 base_damage = int(base_damage * getattr(caster, 'magic_power', 1.0))
+            elif player_class == 'druida':
+                if skill_path in {'natureza', 'espiritos'}:
+                    base_damage = int(base_damage * getattr(caster, 'magic_power', 1.0))
+                elif skill_path == 'metamorfose':
+                    base_damage = int(base_damage * getattr(caster, 'melee_bonus', 1.0))
 
-            base_damage = int(base_damage * self.get_weapon_magic_multiplier(caster, skill_path=getattr(skill, 'path', None)))
+            base_damage = int(base_damage * self.get_weapon_magic_multiplier(caster, skill_path=skill_path))
 
             # Buff elemental por caminho da habilidade
-            if getattr(skill, 'path', None) == 'fogo':
+            if skill_path == 'fogo':
                 base_damage = int(base_damage * bonuses.get('fire_damage_multiplier', 1.0))
-            elif getattr(skill, 'path', None) == 'arcano':
+            elif skill_path == 'arcano':
                 base_damage = int(base_damage * bonuses.get('arcane_damage_multiplier', 1.0))
             
             # Defesa do alvo
@@ -404,11 +414,37 @@ class CombatPA:
             })
             print(f"❄️ {target.name} está congelado! (-1 PA por 2 turnos)")
 
-        elif "cura" in skill_name_lower or "regeneração" in skill_name_lower:
+        elif effect_kind == 'heal' or "cura" in skill_name_lower or "regeneração" in skill_name_lower:
             # Cura
             heal = min(skill.power, caster.max_hp - caster.hp)
-            caster.restore_hp(heal)
+            caster.heal(heal)
             print(f"💚 Você recupera {heal} HP!")
+
+        elif effect_kind == 'damage_guard':
+            self.player_defending = True
+            print("🌫️ Espíritos guardiões envolvem seu corpo até o próximo turno!")
+
+        elif effect_kind == 'damage_heal':
+            heal = min(getattr(skill, 'secondary_power', 0), caster.max_hp - caster.hp)
+            if heal > 0:
+                caster.heal(heal)
+                print(f"💚 Espíritos restauram {heal} HP!")
+
+        if "raízes" in skill_name_lower:
+            self.enemy_status.append({
+                'type': 'frozen',
+                'duration': 2
+            })
+            print(f"🌿 {target.name} foi enredado por raízes! (-1 PA por 2 turnos)")
+
+        elif "vinhas" in skill_name_lower or "floresta" in skill_name_lower:
+            poison_damage = max(4, int(skill.power * 0.18))
+            self.enemy_status.append({
+                'type': 'poison',
+                'damage': poison_damage,
+                'duration': 3
+            })
+            print(f"☠️ Seiva tóxica corrói {target.name}! ({poison_damage} dano por 3 turnos)")
         
         return damage
     
@@ -487,6 +523,89 @@ class CombatPA:
         else:
             print(f"\n❌ Você tentou fugir, mas {self.enemy.name} bloqueou! (-{cost} PA)")
             return False
+
+    def companion_turn(self):
+        """Executa a ação automática de todos os companheiros ativos."""
+        from companions import choose_companion_skill
+
+        if hasattr(self.player, 'sync_companion_progression'):
+            self.player.sync_companion_progression()
+
+        companions = list(getattr(self.player, 'companions', []))
+
+        if not companions or not self.enemy.is_alive():
+            return []
+
+        actions = []
+        for companion in companions:
+            if not self.enemy.is_alive():
+                break
+
+            skill_id, skill = choose_companion_skill(companion)
+            if skill_id and skill:
+                companion['skill_cooldowns'][skill_id] = skill.get('cooldown', 0)
+                effect = skill.get('effect', 'damage')
+                damage = 0
+                heal = 0
+
+                if effect != 'heal':
+                    base_damage = skill.get('power', companion.get('attack_max', 1)) + companion.get('weapon_bonus', 0)
+                    damage = self.calculate_damage(base_damage, self.enemy.defense, False)
+                    self.enemy.take_damage(damage)
+
+                if effect in {'heal', 'damage_heal'}:
+                    heal = min(skill.get('secondary_power', skill.get('power', 0)), self.player.max_hp - self.player.hp)
+                    if heal > 0:
+                        self.player.heal(heal)
+
+                if effect == 'damage_guard':
+                    self.player_defending = True
+
+                if effect == 'damage_freeze':
+                    self.enemy_status.append({
+                        'type': 'frozen',
+                        'duration': 1,
+                    })
+
+                if effect == 'damage_poison':
+                    self.enemy_status.append({
+                        'type': 'poison',
+                        'damage': max(3, skill.get('power', 0) // 4),
+                        'duration': 3,
+                    })
+
+                actions.append({
+                    'name': companion.get('name', 'Companheiro'),
+                    'skill_name': skill.get('name'),
+                    'message': f"✨ {companion.get('name', 'Companheiro')} usa {skill.get('name')}!",
+                    'damage': damage,
+                    'heal': heal,
+                    'effect': effect,
+                })
+                continue
+
+            weapon_bonus = companion.get('weapon_bonus', 0)
+            min_damage = max(1, companion.get('attack_min', 1) + weapon_bonus)
+            max_damage = max(min_damage, companion.get('attack_max', min_damage) + weapon_bonus)
+            base_damage = random.randint(min_damage, max_damage)
+            damage = self.calculate_damage(base_damage, self.enemy.defense, False)
+            self.enemy.take_damage(damage)
+
+            actions.append({
+                'name': companion.get('name', 'Companheiro'),
+                'message': companion.get(
+                    'attack_text',
+                    '{name} auxilia você contra {enemy_name}.'
+                ).format(
+                    name=companion.get('name', 'Companheiro'),
+                    enemy_name=self.enemy.name,
+                ),
+                'damage': damage,
+                'heal': 0,
+                'effect': 'basic_attack',
+            })
+
+        return actions
     
     def enemy_turn(self):
         """Turno do inimigo (IA simples)"""
@@ -508,13 +627,15 @@ class CombatPA:
     def enemy_attack(self):
         """Ataque do inimigo"""
         attack_damage = self.enemy.get_attack_damage()
+        bonuses = self.player.get_passive_bonuses()
+        total_defense = int(self.player.get_total_defense() * bonuses.get('defense_multiplier', 1.0))
         
         # Se player está defendendo, +50% defesa
         defense_modifier = 1.5 if self.player_defending else 1.0
         
         damage = self.calculate_damage(
             attack_damage,
-            self.player.get_total_defense(),
+            total_defense,
             False,
             defense_modifier
         )
