@@ -565,7 +565,7 @@ class World:
 
         neutral_items = {
             "health_potion",
-            "simple_shield", "iron_shield", "rusty_sword"
+            "simple_shield", "iron_shield", "rusty_sword", "exit_key"
         }
         warrior_items = {
             "battle_axe", "flaming_sword", "war_hammer", "dragon_lance",
@@ -595,6 +595,11 @@ class World:
         for item_name in item_names:
             item = items_map.get(item_name)
             if not item:
+                continue
+
+            # Sala final (31) não deve conceder poções de cura.
+            # Isso protege contra saves antigos que ainda possam conter esse item no loot.
+            if room_id == "31" and item_name == "health_potion":
                 continue
 
             if source in {"chest", "boss"}:

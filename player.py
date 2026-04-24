@@ -9,7 +9,7 @@ class Player:
         
         # Atributos primários (ajustados por classe)
         if player_class == "mago":
-            self.strength = 999        # Menos força
+            self.strength = 3        # Menos força
             self.vitality = 4          # Menos vitalidade
             self.agility = 6           # Mais agilidade
             self.magic_power = 1.5     # 50% mais dano mágico

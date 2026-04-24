@@ -148,6 +148,79 @@ class CombatPA:
             return 1.0 + (weapon.elemental_bonus / 100.0)
 
         return 1.0
+
+    def get_skill_crit_chance(self, caster, bonuses, crit_multiplier=1.0):
+        """Calcula a chance de crítico de uma habilidade do jogador."""
+        base_crit = caster.calculate_crit_chance() / 100.0
+        passive_crit = bonuses.get('crit_chance', 0) / 100.0
+        return min(0.95, (base_crit + passive_crit) * crit_multiplier)
+
+    def apply_warrior_skill_damage(self, skill, caster, target, bonuses):
+        """Aplica as habilidades ofensivas do guerreiro com escala de ataque e crítico."""
+        skill_id = getattr(skill, 'skill_id', '')
+        skill_multiplier = skill.power * bonuses.get('damage_multiplier', 1.0)
+
+        if skill_id == 'w_dps_1':
+            crit_chance = self.get_skill_crit_chance(caster, bonuses)
+            is_critical = random.random() < crit_chance
+            damage = self.calculate_damage(
+                int(caster.get_total_attack() * skill_multiplier),
+                target.defense,
+                is_critical,
+                defense_modifier=0.5,
+            )
+            target.take_damage(damage)
+            if is_critical:
+                print("🌟 ✨ GOLPE PRECISO CRÍTICO! ✨ 🌟")
+            print(f"💥 {damage} de dano!")
+            print(f"🩸 {target.name} HP: {target.hp}/{target.max_hp}")
+            return damage
+
+        if skill_id == 'w_berserk_2':
+            crit_chance = self.get_skill_crit_chance(caster, bonuses)
+            is_critical = random.random() < crit_chance
+            damage = self.calculate_damage(
+                int(caster.get_total_attack() * skill_multiplier),
+                target.defense,
+                is_critical,
+            )
+            target.take_damage(damage)
+            if is_critical:
+                print("🌟 ✨ GOLPE SELVAGEM CRÍTICO! ✨ 🌟")
+            print(f"💥 {damage} de dano!")
+            print(f"🩸 {target.name} HP: {target.hp}/{target.max_hp}")
+            return damage
+
+        multi_hit_skills = {
+            'w_dps_3': {'hits': 3, 'crit_multiplier': 1.0},
+            'w_dps_ultimate': {'hits': 5, 'crit_multiplier': 2.0},
+        }
+
+        if skill_id in multi_hit_skills:
+            config = multi_hit_skills[skill_id]
+            crit_chance = self.get_skill_crit_chance(caster, bonuses, config['crit_multiplier'])
+            total_damage = 0
+            print(f"⚔️ {config['hits']} ataques consecutivos!")
+
+            for hit_number in range(config['hits']):
+                is_critical = random.random() < crit_chance
+                attack_damage = self.calculate_damage(
+                    int(caster.get_total_attack() * skill_multiplier),
+                    target.defense,
+                    is_critical,
+                )
+                target.take_damage(attack_damage)
+                total_damage += attack_damage
+                critical_suffix = " CRÍTICO" if is_critical else ""
+                print(f"   💥 Ataque {hit_number + 1}: {attack_damage} dano{critical_suffix}")
+
+                if not target.is_alive():
+                    break
+
+            print(f"🩸 {target.name} HP: {target.hp}/{target.max_hp}")
+            return total_damage
+
+        return None
     
     def calculate_damage(self, attacker_attack, defender_defense, is_critical=False, defense_modifier=1.0):
         """Calcula dano causado"""
@@ -276,11 +349,16 @@ class CombatPA:
     def apply_skill_effects(self, skill, caster, target):
         """Aplica efeitos da habilidade"""
         damage = 0
+        skill_id = getattr(skill, 'skill_id', '')
+        skill_name_lower = skill.name.lower()
+        bonuses = caster.get_passive_bonuses()
+
+        warrior_skill_damage = self.apply_warrior_skill_damage(skill, caster, target, bonuses)
+        if warrior_skill_damage is not None:
+            damage = warrior_skill_damage
         
         # Habilidades de dano
-        if skill.power > 0:
-            # Calcula bônus passivos
-            bonuses = caster.get_passive_bonuses()
+        if skill.power > 0 and warrior_skill_damage is None:
             base_damage = int(skill.power * bonuses['damage_multiplier'])
 
             # Mago aplica poder mágico em habilidades
@@ -304,27 +382,11 @@ class CombatPA:
             print(f"🩸 {target.name} HP: {target.hp}/{target.max_hp}")
         
         # Habilidades específicas
-        if "Bastião Eterno" in skill.name or "Muralha" in skill.name:
+        if "bastião eterno" in skill_name_lower or "muralha" in skill_name_lower:
             print(f"🛡️ Defesa aumentada drasticamente!")
             self.player_defending = True
-        
-        elif "Tempestade de Lâminas" in skill.name or "Investida" in skill.name:
-            # Múltiplos ataques
-            num_attacks = 5 if "Tempestade" in skill.name else 3
-            print(f"⚔️ {num_attacks} ataques consecutivos!")
-            
-            for i in range(num_attacks):
-                attack_damage = int((caster.get_total_attack() * skill.power) - target.defense)
-                attack_damage = max(1, attack_damage)
-                target.take_damage(attack_damage)
-                print(f"   💥 Ataque {i+1}: {attack_damage} dano")
-                
-                if not target.is_alive():
-                    break
-            
-            print(f"🩸 {target.name} HP: {target.hp}/{target.max_hp}")
-        
-        elif "Fogo" in skill.name or "Inferno" in skill.name or "Chama" in skill.name:
+
+        elif "fogo" in skill_name_lower or "inferno" in skill_name_lower or "chama" in skill_name_lower:
             # Adiciona queimadura
             burn_damage = int(skill.power * 0.2)
             self.enemy_status.append({
@@ -333,16 +395,16 @@ class CombatPA:
                 'duration': 3
             })
             print(f"🔥 {target.name} está queimando! ({burn_damage} dano por 3 turnos)")
-        
-        elif "Gelo" in skill.name or "Inverno" in skill.name or "Congelante" in skill.name:
+
+        elif "gelo" in skill_name_lower or "inverno" in skill_name_lower or "congelante" in skill_name_lower:
             # Adiciona congelamento
             self.enemy_status.append({
                 'type': 'frozen',
                 'duration': 2
             })
             print(f"❄️ {target.name} está congelado! (-1 PA por 2 turnos)")
-        
-        elif "Cura" in skill.name or "Regeneração" in skill.name:
+
+        elif "cura" in skill_name_lower or "regeneração" in skill_name_lower:
             # Cura
             heal = min(skill.power, caster.max_hp - caster.hp)
             caster.restore_hp(heal)
