@@ -1481,7 +1481,7 @@ if __name__ == '__main__':
     os.makedirs('static', exist_ok=True)
     
     print("\n" + "="*60)
-    print("🎮 DUNGEON OF THE FORGOTTEN - Web Edition")
+    print("🎮 ECHOES OF THE FORGOTTEN - Web Edition")
     print("="*60)
     print("\n🌐 Servidor iniciado!")
     print("📍 Acesse: http://localhost:5050")

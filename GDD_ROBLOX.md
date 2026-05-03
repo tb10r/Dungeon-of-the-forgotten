@@ -1,8 +1,8 @@
-# GDD Roblox - Dungeon of the Forgotten
+# GDD Roblox - Echoes of the Forgotten
 
 ## 1. Visao Geral
 
-Dungeon of the Forgotten e um dungeon crawler com progressao de personagem, combate em turnos, loot de salas, bosses especiais, NPCs recrutaveis e companions com miniarvore propria.
+Echoes of the Forgotten e um dungeon crawler com progressao de personagem, combate em turnos, loot de salas, bosses especiais, NPCs recrutaveis e companions com miniarvore propria.
 
 Esta versao para Roblox deve manter a identidade do jogo atual, mas adaptar a apresentacao para uma experiencia mais visual, social e clara para sessao curta.
 

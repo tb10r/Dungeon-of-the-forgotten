@@ -14,7 +14,7 @@ def clear_screen():
 def show_title():
     """Exibe título do jogo"""
     print("\n" + "="*60)
-    print("       🗡️  DUNGEON OF THE FORGOTTEN  🗡️")
+    print("       🗡️  ECHOES OF THE FORGOTTEN  🗡️")
     print("="*60)
 
 
@@ -427,7 +427,7 @@ def show_victory(player):
     print("           🎉 VITÓRIA! 🎉")
     print("="*60)
     print(f"\nParabéns, {player.name}!")
-    print("Você escapou da Dungeon of the Forgotten!")
+    print("Você escapou de Echoes of the Forgotten!")
     print(f"\nNível final: {player.level}")
     print(f"HP: {player.hp}/{player.max_hp}")
     print("\n" + "="*60)

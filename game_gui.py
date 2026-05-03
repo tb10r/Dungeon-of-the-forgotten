@@ -124,7 +124,7 @@ class MainMenu:
     def draw_title(self):
         """Desenha o título do jogo"""
         # Título principal
-        title_text = "DUNGEON OF THE FORGOTTEN"
+        title_text = "ECHOES OF THE FORGOTTEN"
         title_surface = self.title_font.render(title_text, True, GOLD)
         title_rect = title_surface.get_rect(center=(SCREEN_WIDTH // 2, 80))
         
@@ -194,7 +194,7 @@ def main():
     try:
         # Configurar janela
         screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Dungeon of the Forgotten")
+        pygame.display.set_caption("Echoes of the Forgotten")
         
         # Ícone (opcional - você pode adicionar um arquivo .png depois)
         # icon = pygame.image.load("icon.png")
